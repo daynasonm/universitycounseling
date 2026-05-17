@@ -560,6 +560,304 @@ const getLastYearAdmissionStats = (univ, dept) => {
   };
 };
 
+const SETECH_GUIDES = {
+  "의약계열": {
+    field: "의학·간호·약학",
+    coreSubjects: ["생명과학II", "화학II", "확률과 통계"],
+    topics: [
+      "CRISPR-Cas9 유전자 편집의 의학적 적용과 한계",
+      "mRNA 백신 작동 원리와 기존 백신 비교",
+      "항생제 내성 슈퍼박테리아와 파지 치료 대안",
+      "의학적 진단에서 통계의 위양성 문제 분석",
+    ],
+    subjectPlan: [
+      ["생명과학", "개념 설명보다 질병 사례, 실험 설계, 윤리 쟁점까지 연결"],
+      ["화학", "약물 작용, 반응 속도, 농도 계산을 보고서로 남기기"],
+      ["수학", "의학 통계, 민감도/특이도, 확률 모델링으로 연결"],
+    ],
+  },
+  "공학계열": {
+    field: "컴퓨터·AI·공학",
+    coreSubjects: ["미적분", "확률과 통계", "물리학II", "정보"],
+    topics: [
+      "머신러닝 알고리즘의 의료 영상 진단 정확도 분석",
+      "자연어처리 모델의 언어 편향 문제와 개선 방향",
+      "스마트시티 교통 최적화 알고리즘 설계",
+      "양자컴퓨팅이 암호화 기술에 미치는 영향",
+    ],
+    subjectPlan: [
+      ["수학", "현실 문제를 함수, 확률, 최적화 모델로 바꿔 탐구"],
+      ["정보", "알고리즘 구현 과정, 오류 수정, 성능 비교를 기록"],
+      ["물리", "공학적 원리와 실험 결과를 그래프·수식으로 설명"],
+    ],
+  },
+  "상경계열": {
+    field: "경영·경제·금융",
+    coreSubjects: ["경제", "확률과 통계", "사회문화"],
+    topics: [
+      "기본소득 해외 실험 사례와 경제적 영향 분석",
+      "행동경제학 관점으로 본 MZ세대 소비 패턴",
+      "탄소세 국제 비교와 국내 도입 시나리오 모델링",
+      "빅데이터 기반 주가 예측 모델의 한계",
+    ],
+    subjectPlan: [
+      ["경제", "정책 사례를 수치와 그래프로 비교"],
+      ["수학", "통계 자료 해석, 회귀, 예측 모델의 한계를 정리"],
+      ["사회", "소비자 행동, 조직, 제도 변화를 토론·보고서로 연결"],
+    ],
+  },
+  "인문사회계열": {
+    field: "법학·정치·교육·사회",
+    coreSubjects: ["정치와 법", "사회문화", "생활과 윤리", "심리학"],
+    topics: [
+      "헌법재판소 주요 결정문 논리 구조 분석",
+      "청소년 참정권 확대 논쟁의 주요국 사례 비교",
+      "AI 튜터의 교육 효과와 자기결정이론 적용",
+      "통합교육 현황과 학습권 보장 방안 연구",
+    ],
+    subjectPlan: [
+      ["국어", "텍스트 분석을 사회 문제와 논증 구조로 연결"],
+      ["사회", "제도 비교, 사례 분석, 토론 후 입장 변화를 기록"],
+      ["영어", "해외 자료나 원문 기사를 읽고 비교 발표"],
+    ],
+  },
+  "자연계열": {
+    field: "자연과학",
+    coreSubjects: ["미적분", "물리학II", "화학II", "생명과학II"],
+    topics: [
+      "실험 오차를 줄이기 위한 통계적 검증 방법",
+      "기후 데이터로 본 장기 추세와 예측 모델",
+      "유전 현상과 확률 모델의 연결",
+      "신소재 구조와 물성 변화의 원리",
+    ],
+    subjectPlan: [
+      ["과학", "실험 설계, 결과, 한계, 후속 질문을 한 세트로 기록"],
+      ["수학", "자료를 그래프와 모델로 설명"],
+      ["영어", "논문 초록을 읽고 핵심 개념을 발표"],
+    ],
+  },
+  "일반계열": {
+    field: "진로 탐색",
+    coreSubjects: ["국어", "영어", "수학", "진로와 직업"],
+    topics: [
+      "관심 직업의 핵심 역량과 고등학교 활동 연결",
+      "전공별 필수 역량 비교와 나의 강점 매칭",
+      "사회 문제 하나를 정해 교과별 관점으로 분석",
+      "독서 후 진로 관심이 바뀐 지점 정리",
+    ],
+    subjectPlan: [
+      ["국어", "관심 분야 글쓰기와 발표를 남기기"],
+      ["영어", "관심 분야 해외 자료를 읽고 요약"],
+      ["진로", "검사 결과를 바탕으로 학과 후보를 좁히기"],
+    ],
+  },
+};
+
+const CAREER_TESTS = [
+  { name:"진로심리검사", type:"적성/가치관", status:"커리어넷 연동 예정", desc:"진로 방향이 아직 넓을 때 먼저 보는 기본 검사" },
+  { name:"직업흥미검사(K)", type:"흥미", status:"커리어넷 연동 예정", desc:"좋아하는 활동 유형을 기준으로 직업군을 좁히는 검사" },
+  { name:"직업흥미검사(H)", type:"흥미", status:"커리어넷 연동 예정", desc:"흥미 프로파일을 더 세분화해 학과 후보와 연결" },
+  { name:"직업적성검사", type:"적성", status:"커리어넷 연동 예정", desc:"잘하는 능력과 전공 요구 역량을 비교" },
+];
+
+const getSetechGuide = major => SETECH_GUIDES[getDepartmentField(major)] || SETECH_GUIDES["일반계열"];
+
+const gradeValuesForProfile = profile => Object.entries(profile?.grades || {})
+  .map(([key, value]) => {
+    const [subject, semester] = key.split("-");
+    return { subject, semester, value:+value };
+  })
+  .filter(item => !Number.isNaN(item.value));
+
+const getLatestSemester = profile => {
+  const values = gradeValuesForProfile(profile);
+  for (let i = SEMS.length - 1; i >= 0; i -= 1) {
+    if (values.some(item => item.semester === SEMS[i])) return SEMS[i];
+  }
+  return SEMS[0];
+};
+
+const getWeakSubjects = profile => {
+  const values = gradeValuesForProfile(profile);
+  const grouped = SUBJECTS.map(subject => {
+    const rows = values.filter(item => item.subject === subject);
+    if (!rows.length) return null;
+    const avg = rows.reduce((sum, item) => sum + item.value, 0) / rows.length;
+    return { subject, avg };
+  }).filter(Boolean);
+  return grouped.sort((a, b) => b.avg - a.avg).slice(0, 3);
+};
+
+const countSetechEvidence = profile => {
+  const record = profile?.gibpu;
+  if (!record || record.error) return 0;
+  const fromSections = record.교과발달?.length || 0;
+  const fromText = splitRecordLines(record.원문 || "").filter(line => includesAny(line, ["세특", "탐구", "보고서", "발표", "실험", "토론"])).length;
+  return Math.max(fromSections, fromText);
+};
+
+const buildMidtermDiagnosis = (profile, major) => {
+  const avgValue = coreAvgForGrades(profile?.grades || {});
+  const latestSemester = getLatestSemester(profile);
+  const latestAvg = semAvgForGrades(profile?.grades || {}, latestSemester);
+  const weakSubjects = getWeakSubjects(profile);
+  const guide = getSetechGuide(major);
+  const status = !avgValue
+    ? "성적 입력 필요"
+    : +avgValue <= 2
+      ? "상위권 유지"
+      : +avgValue <= 4
+        ? "상승 전략 필요"
+        : "집중 관리";
+  const actions = [];
+  if (!avgValue) actions.push("최근 중간고사 과목별 등급을 먼저 입력하세요.");
+  if (weakSubjects[0]) actions.push(`${weakSubjects[0].subject} 등급을 가장 먼저 보완하고, 오답 원인을 유형별로 나누세요.`);
+  actions.push(`${guide.coreSubjects[0]} 과목에서 희망 학과와 연결되는 수행평가/발표 소재를 1개 확보하세요.`);
+  actions.push("중간고사 이후 2주 안에 수행평가 결과물과 탐구 질문을 생활기록부 원문에 정리하세요.");
+  return {
+    status,
+    avgValue,
+    latestSemester,
+    latestAvg,
+    weakSubjects,
+    actions: actions.slice(0, 4),
+  };
+};
+
+const buildSwot = (user, profile, score, diagnosis) => {
+  const avgValue = diagnosis.avgValue ? +diagnosis.avgValue : null;
+  const recordScore = profile?.gibpu?.AI분석?.score || analyzeRecordText(profile?.gibpu?.원문 || "", user?.preferredMajor || "").score;
+  const setechCount = countSetechEvidence(profile);
+  const targets = profile?.targets || [];
+  const strengths = [];
+  const weaknesses = [];
+  const opportunities = [];
+  const threats = [];
+
+  if (avgValue && avgValue <= 2) strengths.push("국수영 평균이 상위권이라 상향 카드 검토가 가능합니다.");
+  if (setechCount >= 5) strengths.push(`세특/탐구 근거가 ${setechCount}건 있어 학종 소재가 보입니다.`);
+  if (targets.length >= 2) strengths.push("목표 대학이 정리되어 전형 비교가 가능합니다.");
+  if (recordScore >= 70) strengths.push("생활기록부 AI 분석에서 활용 가능한 강점이 확인됩니다.");
+
+  if (!avgValue) weaknesses.push("성적 데이터가 부족해 합격선 비교가 어렵습니다.");
+  if (avgValue && avgValue > 4) weaknesses.push("핵심 과목 등급 보완이 최우선입니다.");
+  if (setechCount < 5) weaknesses.push("세특 근거가 부족해 학생부종합 설득력이 약할 수 있습니다.");
+  if (!targets.length) weaknesses.push("목표 대학/학과가 없어 수시 6장 설계가 흐립니다.");
+
+  opportunities.push("중간고사 직후 수행평가와 발표 내용을 세특 소재로 전환할 수 있습니다.");
+  opportunities.push(`${user?.preferredMajor || "희망 학과"}와 연결되는 과목 선택으로 진로 일관성을 만들 수 있습니다.`);
+  if (CAREERNET_API_KEY) opportunities.push("커리어넷 API로 대학·학과 데이터를 실제 목록과 연결할 수 있습니다.");
+  else opportunities.push("커리어넷 키가 들어오면 진로검사와 학과 정보 자동 연동이 가능합니다.");
+
+  if (setechCount < 3) threats.push("세특 마감 전에 근거가 부족하면 학종 경쟁력이 크게 떨어질 수 있습니다.");
+  if (avgValue && targets.some(target => getLastYearAdmissionStats(target, target.dept || user?.preferredMajor).avgGrade < avgValue - 0.1)) threats.push("일부 목표 대학은 현재 내신보다 합격선이 높아 상향 카드로 분류됩니다.");
+  threats.push("수시 6장을 모두 비슷한 수준으로 쓰면 안정 카드가 부족해질 수 있습니다.");
+
+  return {
+    strengths: strengths.length ? strengths : ["강점 판단을 위해 성적, 생활기록부, 목표 대학 입력이 필요합니다."],
+    weaknesses: weaknesses.length ? weaknesses : ["큰 약점은 보이지 않지만 전형별 증거 정리가 필요합니다."],
+    opportunities,
+    threats,
+  };
+};
+
+const categorizeSusiCard = (avgValue, stat) => {
+  if (!avgValue || !stat?.avgGrade) return { label:"검토", className:"neutral" };
+  const diff = +avgValue - stat.avgGrade;
+  if (diff <= -0.35) return { label:"안정", className:"safe" };
+  if (diff <= 0.25) return { label:"적정", className:"target" };
+  if (diff <= 0.85) return { label:"상향", className:"reach" };
+  return { label:"도전", className:"high" };
+};
+
+const buildSusiCards = (user, profile, catalog, avgValue) => {
+  const major = user?.preferredMajor || "";
+  const seen = new Set();
+  const preferred = [...(profile?.targets || [])];
+  const fallback = (catalog || [])
+    .filter(univ => departmentFilterMatches(univ, "all"))
+    .filter(univ => !major || `${univ.name} ${(univ.depts || []).join(" ")}`.includes(major.replace(/학부|학과/g, "")) || departmentFilterMatches(univ, DEPARTMENT_FILTERS.find(f => f.terms.some(term => major.includes(term)))?.key || "all"))
+    .sort((a, b) => rankScore(a, "susi", "all") - rankScore(b, "susi", "all"))
+    .slice(0, 18);
+  const candidates = [...preferred, ...fallback]
+    .filter(univ => {
+      if (!univ?.id || seen.has(univ.id)) return false;
+      seen.add(univ.id);
+      return true;
+    });
+
+  const cards = candidates.map(univ => {
+    const dept = univ.dept || (major && (univ.depts || []).find(item => item.includes(major.replace(/학부|학과/g, "")))) || univ.depts?.[0] || major || "학과 미선택";
+    const stat = getLastYearAdmissionStats(univ, dept);
+    const fit = categorizeSusiCard(avgValue, stat);
+    return {
+      id: `${univ.id}-${dept}`,
+      name: univ.name,
+      dept,
+      fit,
+      gradeRange: stat.gradeRange,
+      avgGrade: stat.avgGrade,
+      bestTrack: stat.bestTrack,
+      competition: stat.competition,
+    };
+  });
+
+  const buckets = {
+    reach: cards.filter(card => ["도전", "상향"].includes(card.fit.label)).slice(0, 2),
+    target: cards.filter(card => card.fit.label === "적정").slice(0, 2),
+    safe: cards.filter(card => card.fit.label === "안정").slice(0, 2),
+    neutral: cards.filter(card => card.fit.label === "검토").slice(0, 2),
+  };
+  const ordered = [...buckets.reach, ...buckets.target, ...buckets.safe, ...buckets.neutral];
+  return ordered.length >= 6 ? ordered.slice(0, 6) : [...ordered, ...cards.filter(card => !ordered.some(item => item.id === card.id))].slice(0, 6);
+};
+
+const buildStrategyReport = (user, profile, catalog = UNIVS) => {
+  const major = user?.preferredMajor || "학과 미입력";
+  const guide = getSetechGuide(major);
+  const diagnosis = buildMidtermDiagnosis(profile, major);
+  const recordAnalysis = profile?.gibpu?.AI분석 || analyzeRecordText(profile?.gibpu?.원문 || "", major);
+  const setechCount = countSetechEvidence(profile);
+  const setechTarget = 10;
+  const essayScores = ESSAY_PROMPTS.map(prompt => analyzeEssayDraft(profile?.essays?.[prompt.id] || "", prompt, profile?.gibpu?.원문 || "", major).score);
+  const essayAvg = essayScores.length ? Math.round(essayScores.reduce((sum, value) => sum + value, 0) / essayScores.length) : 0;
+  const gradeScore = diagnosis.avgValue ? Math.max(25, Math.round((6 - Math.min(6, +diagnosis.avgValue)) / 5 * 100)) : 35;
+  const setechScore = Math.min(100, Math.round((setechCount / setechTarget) * 100));
+  const targetScore = Math.min(100, (profile?.targets?.length || 0) * 30);
+  const roadmapScore = buildRoadmapState(profile?.checklist || {}).progress;
+  const total = Math.round(gradeScore * 0.28 + (recordAnalysis.score || 30) * 0.28 + setechScore * 0.2 + targetScore * 0.14 + roadmapScore * 0.1);
+  const swot = buildSwot(user, profile, total, diagnosis);
+  const susiCards = buildSusiCards(user, profile, catalog, diagnosis.avgValue);
+  const targetStats = (profile?.targets || []).slice(0, 4).map(target => {
+    const stat = getLastYearAdmissionStats(target, target.dept || major);
+    return { ...stat, name:target.name, dept:target.dept || stat.dept, fit:categorizeSusiCard(diagnosis.avgValue, stat) };
+  });
+
+  return {
+    major,
+    field: guide.field,
+    total,
+    level: total >= 80 ? "상위권 전략" : total >= 60 ? "보완형 전략" : "기초 구축",
+    diagnosis,
+    recordAnalysis,
+    setechCount,
+    setechTarget,
+    setechGap: Math.max(0, setechTarget - setechCount),
+    guide,
+    swot,
+    susiCards,
+    targetStats,
+    careerTests: CAREER_TESTS,
+    roadmap: buildRoadmapState(profile?.checklist || {}),
+    actionPlan: [
+      diagnosis.actions[0],
+      setechCount < setechTarget ? `세특 근거 ${Math.max(1, Math.min(3, setechTarget - setechCount))}건을 이번 달 안에 추가하세요.` : "세특 근거는 충분합니다. 전형별로 강한 소재를 골라 정리하세요.",
+      `수시 6장은 상향 1~2장, 적정 2~3장, 안정 1~2장으로 나누어 관리하세요.`,
+      `${guide.coreSubjects[0]} 과목에서 "${guide.topics[0]}" 같은 주제를 학생 언어로 바꿔 시작하세요.`,
+    ].filter(Boolean),
+  };
+};
+
 const createProfile = (overrides = {}) => ({
   targets: [],
   grades: {},
@@ -812,20 +1110,37 @@ const CONSULT_TOPICS = ["입시 전략", "목표 대학 상담", "성적 개선 
 const TIME_SLOTS = ["09:00","09:30","10:00","10:30","11:00","11:30","13:00","13:30","14:00","14:30","15:00","15:30","16:00","16:30"];
 const WEEKDAY_KO = ["일","월","화","수","목","금","토"];
 const WEEKDAY_EN = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
-const STUDENT_NAV = [["홈","⌂","홈"],["목표대학","🏛","목표대학"],["성적표","📊","성적표"],["생활기록부","📄","생활기록부"],["자소서","✍","자소서"],["로드맵","🧭","로드맵"],["과제점검","📝","과제 점검"],["상담","🗓","상담"]];
+const STUDENT_NAV = [["홈","⌂","홈"],["목표대학","🏛","목표대학"],["성적표","📊","성적표"],["전략센터","✨","전략센터"],["생활기록부","📄","생활기록부"],["자소서","✍","자소서"],["로드맵","🧭","로드맵"],["과제점검","📝","과제 점검"],["상담","🗓","상담"]];
 const CHECKLIST_ITEMS = [
+  { id:"career-major", month:"2026년 3월", title:"진로·학과 방향 정리", body:"관심 학과 2~3개와 연결되는 활동 키워드를 정리합니다.", urgent:false },
+  { id:"subject-strategy", month:"2026년 3월", title:"과목 선택 전략 점검", body:"목표 학과와 연결되는 선택 과목, 심화 과목, 탐구 주제를 정리합니다.", urgent:false },
+  { id:"midterm-plan", month:"2026년 4월", title:"중간고사 전략 수립", body:"국어, 수학, 영어 중 흔들리는 과목을 먼저 정하고 보완 계획을 세웁니다.", urgent:false },
+  { id:"university-research", month:"2026년 4월", title:"전국 대학·학과 탐색", body:"지역, 학과, 입결 기준으로 후보 대학을 넓게 탐색합니다.", urgent:false },
   { id:"target-balance", month:"2026년 5월", title:"목표 대학 3곳 등록", body:"상향, 적정, 안정 대학을 각각 최소 1곳씩 정리합니다.", urgent:false },
   { id:"grades-current", month:"2026년 5월", title:"최근 성적표 입력", body:"국어, 수학, 영어 중심으로 학기별 등급을 입력합니다.", urgent:false },
+  { id:"strategy-center", month:"2026년 5월", title:"전략센터 리포트 확인", body:"성적 진단, SWOT, 세특 갭, 수시 6장 배분을 한 번에 확인합니다.", urgent:false },
   { id:"record-upload", month:"2026년 6월", title:"생활기록부 자료 업로드", body:"PDF나 사진 파일로 세특, 진로활동, 동아리 활동을 상담 전 미리 정리합니다.", urgent:false },
   { id:"first-counseling", month:"2026년 6월", title:"1차 상담 예약", body:"목표 대학과 전형 방향을 상담사와 확정합니다.", urgent:false },
+  { id:"setech-gap", month:"2026년 6월", title:"세특 갭 보완", body:"부족한 과목의 탐구 보고서, 발표, 질문 기록을 추가합니다.", urgent:false },
   { id:"essay-outline", month:"2026년 7월", title:"자기소개서 소재 초안", body:"활동별 문제, 행동, 결과, 배운 점을 한 문단씩 정리합니다.", urgent:false },
+  { id:"susi-six-cards", month:"2026년 7월", title:"수시 6장 초안 배치", body:"상향, 적정, 안정 카드를 나누고 각 대학의 작년도 입결을 비교합니다.", urgent:false },
   { id:"final-strategy", month:"2026년 8월", title:"수시 지원 전략 확정", body:"6개 카드의 위험도를 조정하고 최종 리스트를 확정합니다.", urgent:true },
+  { id:"submission-check", month:"2026년 9월", title:"원서 접수 전 최종 확인", body:"전형명, 학과명, 제출 서류, 마감 시간을 다시 확인합니다.", urgent:true },
+  { id:"interview-plan", month:"2026년 10월", title:"면접·발표 대비", body:"생활기록부와 자소서에서 예상 질문을 뽑고 답변 구조를 준비합니다.", urgent:false },
+  { id:"final-exam", month:"2026년 11월", title:"기말·수능 이후 전략 조정", body:"정시 가능성과 수시 면접 일정을 함께 보며 마지막 전략을 조정합니다.", urgent:false },
+  { id:"result-followup", month:"2026년 12월", title:"합격 결과 정리", body:"합격, 예비, 추가 합격 흐름을 기록하고 다음 선택지를 정리합니다.", urgent:false },
 ];
 const CHECKLIST_STAGE_BY_MONTH = {
+  "2026년 3월": "진로 설계",
+  "2026년 4월": "성적 준비",
   "2026년 5월": "기초 세팅",
   "2026년 6월": "자료 준비",
   "2026년 7월": "서류 초안",
   "2026년 8월": "지원 확정",
+  "2026년 9월": "원서 접수",
+  "2026년 10월": "면접 대비",
+  "2026년 11월": "최종 조정",
+  "2026년 12월": "결과 관리",
 };
 const buildRoadmapState = (roadmap = {}) => {
   const doneCount = CHECKLIST_ITEMS.filter(item => roadmap[item.id]).length;
@@ -1357,6 +1672,82 @@ select:focus{border-color:#0EA5E9;}
 .mini-item{padding:10px;border-radius:10px;background:#F2F5F9;}
 .mini-title{font-size:13px;font-weight:600;color:#202632;margin-bottom:2px;}
 .mini-body{font-size:12px;color:#6B7684;}
+.strategy-report{display:grid;gap:14px;}
+.strategy-hero{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;border:1px solid rgba(255,255,255,0.76);background:linear-gradient(135deg,rgba(255,255,255,0.78),rgba(234,247,255,0.72));border-radius:26px;padding:24px 26px;box-shadow:0 18px 44px rgba(11,19,36,0.09),inset 0 1px 0 rgba(255,255,255,0.76);backdrop-filter:blur(22px) saturate(155%);}
+.strategy-eyebrow{display:inline-flex;align-items:center;border-radius:999px;background:var(--brand-blue-soft);color:var(--brand-blue);font-size:11px;font-weight:900;padding:5px 10px;margin-bottom:10px;}
+.strategy-title{font-size:24px;line-height:1.28;font-weight:900;color:var(--brand-gray);letter-spacing:-0.5px;}
+.strategy-copy{font-size:13px;line-height:1.65;color:var(--brand-muted);margin-top:6px;}
+.strategy-score{min-width:112px;border-radius:24px;background:linear-gradient(135deg,var(--brand-blue),#0068D9);color:#fff;text-align:center;padding:18px 16px;box-shadow:0 16px 34px rgba(14,165,233,0.24);}
+.strategy-score strong{display:block;font-size:34px;line-height:1;font-weight:900;letter-spacing:-0.8px;}
+.strategy-score span{display:block;margin-top:7px;font-size:12px;font-weight:900;}
+.strategy-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;}
+.strategy-kpi{border:1px solid rgba(255,255,255,0.74);background:rgba(255,255,255,0.72);backdrop-filter:blur(20px) saturate(155%);border-radius:20px;padding:15px 16px;box-shadow:0 12px 30px rgba(11,19,36,0.06),inset 0 1px 0 rgba(255,255,255,0.72);}
+.strategy-kpi span{display:block;font-size:11px;font-weight:800;color:var(--brand-subtle);margin-bottom:6px;}
+.strategy-kpi strong{display:block;font-size:18px;line-height:1.25;font-weight:900;color:var(--brand-gray);letter-spacing:-0.25px;}
+.strategy-card{border:1px solid rgba(255,255,255,0.74);background:rgba(255,255,255,0.72);backdrop-filter:blur(20px) saturate(155%);border-radius:24px;padding:20px 22px;box-shadow:0 16px 40px rgba(11,19,36,0.08),inset 0 1px 0 rgba(255,255,255,0.72);}
+.strategy-card-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:14px;}
+.strategy-label{font-size:11px;font-weight:900;color:var(--brand-blue);margin-bottom:5px;}
+.strategy-card h3{margin:0;font-size:18px;line-height:1.35;font-weight:900;color:var(--brand-gray);letter-spacing:-0.25px;}
+.strategy-tag,.susi-label{display:inline-flex;align-items:center;border-radius:999px;background:var(--brand-blue-soft);color:var(--brand-blue);font-size:12px;font-weight:900;padding:5px 10px;white-space:nowrap;}
+.strategy-split{display:grid;grid-template-columns:210px minmax(0,1fr);gap:14px;align-items:stretch;}
+.strategy-diagnosis{border:1px solid var(--brand-border);border-radius:18px;background:#F8FAFC;padding:16px;}
+.strategy-big-number{font-size:28px;line-height:1.1;font-weight:900;color:var(--brand-gray);letter-spacing:-0.5px;}
+.strategy-list{display:grid;gap:8px;}
+.strategy-action{border:1px solid rgba(14,165,233,0.14);background:rgba(234,247,255,0.62);border-radius:14px;padding:10px 12px;color:#4B5563;font-size:13px;line-height:1.6;}
+.strategy-chip-row{display:flex;flex-wrap:wrap;gap:7px;margin-top:12px;}
+.strategy-chip{display:inline-flex;align-items:center;border-radius:999px;background:#EEF2F7;color:var(--brand-muted);font-size:12px;font-weight:900;padding:5px 10px;}
+.swot-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;}
+.swot-card{border:1px solid var(--brand-border);border-radius:18px;padding:14px;background:#F8FAFC;}
+.swot-card h4{font-size:13px;font-weight:900;color:var(--brand-gray);margin:0 0 8px;}
+.swot-card p{font-size:12.5px;line-height:1.6;color:#4B5563;margin:0 0 7px;}
+.swot-card p:last-child{margin-bottom:0;}
+.swot-card.strength{background:rgba(240,253,244,0.72);border-color:rgba(5,150,105,0.16);}
+.swot-card.weakness{background:rgba(255,247,237,0.72);border-color:rgba(249,115,22,0.18);}
+.swot-card.opportunity{background:rgba(234,247,255,0.72);border-color:rgba(14,165,233,0.16);}
+.swot-card.threat{background:rgba(254,242,242,0.72);border-color:rgba(220,38,38,0.15);}
+.gap-meter{height:12px;border-radius:999px;background:#EEF2F7;overflow:hidden;margin-bottom:10px;}
+.gap-meter-fill{height:100%;border-radius:999px;background:linear-gradient(90deg,var(--brand-blue),#14B8A6);}
+.topic-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;}
+.topic-card{display:grid;grid-template-columns:34px minmax(0,1fr);gap:10px;align-items:center;border:1px solid rgba(14,165,233,0.14);background:rgba(234,247,255,0.58);border-radius:16px;padding:12px;}
+.topic-card span{width:34px;height:34px;border-radius:12px;background:var(--brand-blue);color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:900;}
+.topic-card strong{font-size:13px;line-height:1.55;color:var(--brand-gray);}
+.teacher-script{margin-top:12px;border:1px solid rgba(20,184,166,0.16);background:rgba(240,253,250,0.72);border-radius:16px;padding:13px 14px;}
+.teacher-script strong{display:block;font-size:12px;font-weight:900;color:#0F766E;margin-bottom:5px;}
+.teacher-script p{margin:0;font-size:13px;line-height:1.7;color:#4B5563;}
+.subject-plan-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
+.subject-plan-card{border:1px solid var(--brand-border);border-radius:16px;background:#F8FAFC;padding:13px;}
+.subject-plan-card strong{display:block;font-size:14px;font-weight:900;color:var(--brand-gray);margin-bottom:6px;}
+.subject-plan-card span{display:block;font-size:12.5px;line-height:1.6;color:var(--brand-muted);}
+.susi-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
+.susi-card{border:1px solid var(--brand-border);border-radius:18px;background:#F8FAFC;padding:14px;}
+.susi-card.reach,.susi-card.high{border-color:rgba(249,115,22,0.24);background:rgba(255,247,237,0.72);}
+.susi-card.target{border-color:rgba(14,165,233,0.22);background:rgba(234,247,255,0.72);}
+.susi-card.safe{border-color:rgba(5,150,105,0.18);background:rgba(240,253,244,0.72);}
+.susi-top{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px;}
+.susi-top span{border-radius:999px;background:#fff;color:var(--brand-blue);font-size:11px;font-weight:900;padding:4px 8px;}
+.susi-top strong{font-size:12px;color:var(--brand-gray);}
+.susi-card h4{font-size:15px;line-height:1.35;color:var(--brand-gray);font-weight:900;margin:0 0 4px;}
+.susi-card p{font-size:12.5px;color:var(--brand-muted);margin:0 0 8px;}
+.susi-meta{font-size:12px;line-height:1.5;color:#4B5563;}
+.career-test-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;}
+.career-test-card{border:1px solid var(--brand-border);border-radius:16px;background:#F8FAFC;padding:13px;}
+.career-test-card strong{display:block;font-size:13px;font-weight:900;color:var(--brand-gray);}
+.career-test-card span{display:block;font-size:11.5px;color:var(--brand-blue);font-weight:900;margin-top:2px;}
+.career-test-card p{font-size:12px;line-height:1.55;color:var(--brand-muted);margin:8px 0;}
+.career-test-card small{font-size:11px;color:var(--brand-subtle);font-weight:800;}
+.admission-mini-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;}
+.admission-mini-card{border:1px solid var(--brand-border);border-radius:16px;background:#F8FAFC;padding:13px;}
+.admission-mini-top{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:6px;}
+.admission-mini-top strong{font-size:14px;color:var(--brand-gray);font-weight:900;}
+.admission-mini-card p{font-size:12.5px;color:var(--brand-muted);margin:0 0 7px;}
+.admission-mini-card div:last-child{font-size:12px;color:#4B5563;}
+.susi-label.safe{background:rgba(5,150,105,0.12);color:#059669;}
+.susi-label.target{background:var(--brand-blue-soft);color:var(--brand-blue);}
+.susi-label.reach,.susi-label.high{background:var(--brand-orange-soft);color:var(--brand-orange);}
+.strategy-report.compact .strategy-hero{padding:18px 20px;}
+.strategy-report.compact .strategy-title{font-size:20px;}
+.strategy-report.compact .strategy-kpis{grid-template-columns:repeat(4,1fr);}
+.strategy-report.compact .strategy-card{padding:16px 18px;border-radius:20px;}
 .mobile-nav{display:none;}
 .mobile-nav-btn{border:none;background:transparent;color:#6B7684;font-size:11px;font-family:'Noto Sans KR',sans-serif;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 4px;}
 .mobile-nav-btn span{font-size:18px;line-height:1;}
@@ -1424,6 +1815,9 @@ select:focus{border-color:#0EA5E9;}
   .profile-major-spotlight{display:flex;width:100%;justify-content:space-between;}
   .profile-grid{grid-template-columns:1fr;}
   .form-grid{grid-template-columns:1fr;}
+  .strategy-kpis{grid-template-columns:repeat(2,1fr);}
+  .swot-grid,.career-test-grid{grid-template-columns:repeat(2,1fr);}
+  .susi-grid,.subject-plan-grid{grid-template-columns:repeat(2,1fr);}
   .admission-grid{grid-template-columns:repeat(2,1fr);}
   .admission-head{flex-direction:column;}
   .admission-range{width:100%;text-align:left;}
@@ -1444,7 +1838,7 @@ select:focus{border-color:#0EA5E9;}
 @media (max-width: 760px){
   .root{height:100dvh;min-height:100dvh;}
   .sidebar{display:none;}
-  .main{width:100%;padding:20px 16px calc(88px + env(safe-area-inset-bottom));}
+  .main{width:100%;padding:20px 16px calc(132px + env(safe-area-inset-bottom));}
   .ptitle,.home-title{font-size:22px;}
   .booking-page{max-width:100%;}
   .booking-title{font-size:21px;}
@@ -1475,9 +1869,13 @@ select:focus{border-color:#0EA5E9;}
   .record-finding.action{grid-column:auto;}
   .essay-shell{grid-template-columns:1fr;}
   .essay-analysis-card{grid-template-columns:1fr;}
+  .strategy-hero{flex-direction:column;padding:20px;border-radius:22px;}
+  .strategy-score{width:100%;min-width:0;}
+  .strategy-split{grid-template-columns:1fr;}
+  .strategy-kpis,.swot-grid,.topic-grid,.subject-plan-grid,.susi-grid,.career-test-grid,.admission-mini-grid{grid-template-columns:1fr;}
   .univ-filter-bar{grid-template-columns:1fr;}
   .univ-result-meta{align-items:flex-start;flex-direction:column;}
-  .mobile-nav{display:grid;grid-template-columns:repeat(8,1fr);position:fixed;left:0;right:0;bottom:0;z-index:30;padding:7px 8px calc(7px + env(safe-area-inset-bottom));background:rgba(255,255,255,0.96);border-top:1px solid #E5EAF1;box-shadow:0 -8px 24px rgba(17,24,39,0.08);backdrop-filter:blur(14px);}
+  .mobile-nav{display:grid;grid-template-columns:repeat(5,1fr);position:fixed;left:0;right:0;bottom:0;z-index:30;padding:7px 8px calc(7px + env(safe-area-inset-bottom));background:rgba(255,255,255,0.96);border-top:1px solid #E5EAF1;box-shadow:0 -8px 24px rgba(17,24,39,0.08);backdrop-filter:blur(14px);}
   .mobile-nav.two{grid-template-columns:repeat(2,1fr);}
   .auth-root{align-items:flex-start;padding:20px 16px;}
   .auth-card{padding:20px;}
@@ -1493,6 +1891,225 @@ select:focus{border-color:#0EA5E9;}
   .admission-grid{grid-template-columns:1fr;}
 }
 `;
+
+function StrategyReport({ report, compact = false }) {
+  if (!report) return null;
+  return (
+    <div className={`strategy-report${compact ? " compact" : ""}`}>
+      <section className="strategy-hero">
+        <div>
+          <div className="strategy-eyebrow">AI 전략센터 · SUMMIT 핵심 기능 간소화</div>
+          <div className="strategy-title">{report.major} 입시 전략 리포트</div>
+          <div className="strategy-copy">성적 진단, SWOT, 세특 갭, 과목 선택, 수시 6장, 진로 탐색을 한 화면에서 요약합니다.</div>
+        </div>
+        <div className="strategy-score">
+          <strong>{report.total}</strong>
+          <span>{report.level}</span>
+        </div>
+      </section>
+
+      <div className="strategy-kpis">
+        <div className="strategy-kpi">
+          <span>국수영 평균</span>
+          <strong>{report.diagnosis.avgValue ? `${(+report.diagnosis.avgValue).toFixed(1)}등급` : "미입력"}</strong>
+        </div>
+        <div className="strategy-kpi">
+          <span>성적 진단</span>
+          <strong>{report.diagnosis.status}</strong>
+        </div>
+        <div className="strategy-kpi">
+          <span>세특 근거</span>
+          <strong>{report.setechCount}/{report.setechTarget}</strong>
+        </div>
+        <div className="strategy-kpi">
+          <span>생기부 AI</span>
+          <strong>{report.recordAnalysis.level}</strong>
+        </div>
+      </div>
+
+      <section className="strategy-card">
+        <div className="strategy-card-head">
+          <div>
+            <div className="strategy-label">성적 현황 진단</div>
+            <h3>중간고사 이후 바로 볼 핵심 지표</h3>
+          </div>
+          <span className="strategy-tag">{report.diagnosis.latestSemester}</span>
+        </div>
+        <div className="strategy-split">
+          <div className="strategy-diagnosis">
+            <div className="strategy-big-number">{report.diagnosis.latestAvg ? `${report.diagnosis.latestAvg}등급` : "성적 필요"}</div>
+            <div className="strategy-copy">최근 학기 국수영 평균 기준입니다. 낮을수록 우수합니다.</div>
+          </div>
+          <div className="strategy-list">
+            {report.diagnosis.actions.map((item, index) => <div key={index} className="strategy-action">{item}</div>)}
+          </div>
+        </div>
+        {!!report.diagnosis.weakSubjects.length && (
+          <div className="strategy-chip-row">
+            {report.diagnosis.weakSubjects.map(item => <span key={item.subject} className="strategy-chip">{item.subject} 보완 · {item.avg.toFixed(1)}등급</span>)}
+          </div>
+        )}
+      </section>
+
+      <section className="strategy-card">
+        <div className="strategy-card-head">
+          <div>
+            <div className="strategy-label">SWOT 분석</div>
+            <h3>강점은 살리고, 위험은 상담 과제로 바꾸기</h3>
+          </div>
+        </div>
+        <div className="swot-grid">
+          <div className="swot-card strength"><h4>Strength</h4>{report.swot.strengths.map((item, i) => <p key={i}>{item}</p>)}</div>
+          <div className="swot-card weakness"><h4>Weakness</h4>{report.swot.weaknesses.map((item, i) => <p key={i}>{item}</p>)}</div>
+          <div className="swot-card opportunity"><h4>Opportunity</h4>{report.swot.opportunities.map((item, i) => <p key={i}>{item}</p>)}</div>
+          <div className="swot-card threat"><h4>Threat</h4>{report.swot.threats.map((item, i) => <p key={i}>{item}</p>)}</div>
+        </div>
+      </section>
+
+      <section className="strategy-card">
+        <div className="strategy-card-head">
+          <div>
+            <div className="strategy-label">세특 갭 분석</div>
+            <h3>현재 기록과 목표 기록의 차이</h3>
+          </div>
+          <span className="strategy-tag">{report.setechGap ? `${report.setechGap}건 보완` : "목표 도달"}</span>
+        </div>
+        <div className="gap-meter">
+          <div className="gap-meter-fill" style={{ width:`${Math.min(100, report.setechCount / report.setechTarget * 100)}%` }} />
+        </div>
+        <div className="strategy-copy">목표는 연간 세특/탐구 근거 {report.setechTarget}건입니다. 단순 개수보다 “교과 질문 → 탐구 → 발표/보고서 → 배운 점” 흐름이 중요합니다.</div>
+      </section>
+
+      {!compact && (
+        <>
+          <section className="strategy-card">
+            <div className="strategy-card-head">
+              <div>
+                <div className="strategy-label">세특 작성 전략 + 주제 추천</div>
+                <h3>{report.field} 추천 주제</h3>
+              </div>
+              <span className="strategy-tag">{report.guide.coreSubjects[0]}</span>
+            </div>
+            <div className="topic-grid">
+              {report.guide.topics.map((topic, index) => (
+                <div key={topic} className="topic-card">
+                  <span>{index + 1}</span>
+                  <strong>{topic}</strong>
+                </div>
+              ))}
+            </div>
+            <div className="teacher-script">
+              <strong>교과 선생님께 전달할 문장</strong>
+              <p>저는 {report.major}를 목표로 하고 있어서, 수업에서 위 주제를 심화 탐구했습니다. 발표 자료와 보고서를 제출드릴 테니 탐구 과정과 배운 점이 세특에 드러나도록 피드백 부탁드립니다.</p>
+            </div>
+          </section>
+
+          <section className="strategy-card">
+            <div className="strategy-card-head">
+              <div>
+                <div className="strategy-label">과목 선택 전략</div>
+                <h3>전공 적합성을 보여주는 선택 과목</h3>
+              </div>
+            </div>
+            <div className="subject-plan-grid">
+              {report.guide.subjectPlan.map(([subject, plan]) => (
+                <div key={subject} className="subject-plan-card">
+                  <strong>{subject}</strong>
+                  <span>{plan}</span>
+                </div>
+              ))}
+            </div>
+            <div className="strategy-chip-row">
+              {report.guide.coreSubjects.map(subject => <span key={subject} className="strategy-chip">{subject}</span>)}
+            </div>
+          </section>
+        </>
+      )}
+
+      <section className="strategy-card">
+        <div className="strategy-card-head">
+          <div>
+            <div className="strategy-label">수시 6장 최적 배분</div>
+            <h3>상향 1~2 · 적정 2~3 · 안정 1~2</h3>
+          </div>
+          <span className="strategy-tag">작년도 입결 기준</span>
+        </div>
+        <div className="susi-grid">
+          {report.susiCards.map(card => (
+            <div key={card.id} className={`susi-card ${card.fit.className}`}>
+              <div className="susi-top">
+                <span>{card.fit.label}</span>
+                <strong>{card.gradeRange}</strong>
+              </div>
+              <h4>{card.name}</h4>
+              <p>{card.dept}</p>
+              <div className="susi-meta">{card.bestTrack} · {card.competition}:1</div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {!compact && (
+        <section className="strategy-card">
+          <div className="strategy-card-head">
+            <div>
+              <div className="strategy-label">진로·학과 탐색</div>
+              <h3>커리어넷 연동 전 미리 보는 검사 흐름</h3>
+            </div>
+            <span className="strategy-tag">API 키 대기</span>
+          </div>
+          <div className="career-test-grid">
+            {report.careerTests.map(test => (
+              <div key={test.name} className="career-test-card">
+                <div>
+                  <strong>{test.name}</strong>
+                  <span>{test.type}</span>
+                </div>
+                <p>{test.desc}</p>
+                <small>{test.status}</small>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {!!report.targetStats.length && (
+        <section className="strategy-card">
+          <div className="strategy-card-head">
+            <div>
+              <div className="strategy-label">대학교 합격선 · 수시 배치표</div>
+              <h3>목표 대학별 작년도 입결 비교</h3>
+            </div>
+          </div>
+          <div className="admission-mini-grid">
+            {report.targetStats.map(item => (
+              <div key={`${item.name}-${item.dept}`} className="admission-mini-card">
+                <div className="admission-mini-top">
+                  <strong>{item.name}</strong>
+                  <span className={`susi-label ${item.fit.className}`}>{item.fit.label}</span>
+                </div>
+                <p>{item.dept}</p>
+                <div>{item.year} 수시 합격권 · {item.gradeRange}</div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      <section className="strategy-card">
+        <div className="strategy-card-head">
+          <div>
+            <div className="strategy-label">다음 액션</div>
+            <h3>복잡한 기능을 오늘 할 일로 줄이기</h3>
+          </div>
+        </div>
+        <div className="strategy-list">
+          {report.actionPlan.map((item, index) => <div key={index} className="strategy-action">{item}</div>)}
+        </div>
+      </section>
+    </div>
+  );
+}
 
 export default function App() {
   const [users, setUsers] = useState(loadUsers);
@@ -1927,6 +2544,13 @@ export default function App() {
     .sort((a, b) => `${a.preferredDate || ""}${a.preferredTime || ""}`.localeCompare(`${b.preferredDate || ""}${b.preferredTime || ""}`))[0];
 
   const universityCatalog = mergeUniversityCatalog([...UNIVS, ...apiUniversities]);
+  const currentStudentProfile = createProfile({ targets, grades, gibpu, fname, essays: essayDrafts, checklist, assignments });
+  const studentStrategy = currentUser?.role === "student"
+    ? buildStrategyReport(currentUser, currentStudentProfile, universityCatalog)
+    : null;
+  const profileStrategy = profileStudent
+    ? buildStrategyReport(profileStudent.user, profileStudent.profile, universityCatalog)
+    : null;
   const activeUniversityFilters = regionFilter !== "all" || departmentFilter !== "all" || rankFilter !== "overall";
   const filtered = universityCatalog
     .filter(u => {
@@ -2299,6 +2923,17 @@ export default function App() {
                   <div className="cstat"><div className="cstat-label">생활기록부</div><div className="cstat-value">{profileStudent.profile.gibpu ? "O" : "-"}</div></div>
                       <div className="cstat"><div className="cstat-label">대표 상태</div><div className="cstat-value">{profileStudent.match?.label || "대기"}</div></div>
                 </div>
+
+                <section className="profile-section">
+                  <div className="request-top">
+                    <div>
+                      <div className="secl">입시 전략 요약</div>
+                      <div className="mini-body">성적 진단, SWOT, 세특 갭, 수시 6장 배치를 상담 전에 빠르게 확인합니다.</div>
+                    </div>
+                    <span className="status-pill sent">{profileStrategy?.level || "전략 대기"}</span>
+                  </div>
+                  <StrategyReport report={profileStrategy} compact />
+                </section>
 
                 <section className="profile-section">
                   <div className="request-top">
@@ -2848,7 +3483,7 @@ export default function App() {
             <div className="home-hero">
               <div className="home-kicker">{currentUser.highSchool || "입시플래너"} · {currentUser.preferredMajor || "학과 미입력"} · {currentUser.gradeLevel || "학생"}</div>
               <div className="home-title">{currentUser.name}님의 입시 로드</div>
-              <div className="home-sub">목표 대학, 성적표, 생활기록부, 자소서, 로드맵, 과제 점검, 상담 예약을 앱 흐름처럼 한 화면에서 이어서 관리합니다.</div>
+              <div className="home-sub">목표 대학, 성적표, 전략센터, 생활기록부, 자소서, 로드맵, 과제 점검, 상담 예약을 앱 흐름처럼 한 화면에서 이어서 관리합니다.</div>
             </div>
 
             <div className="quick-grid">
@@ -2861,6 +3496,11 @@ export default function App() {
                 <div className="quick-icon">📊</div>
                 <div className="quick-title">성적표</div>
                 <div className="quick-body">{avg ? `국수영 평균 ${(+avg).toFixed(1)}등급` : "학기별 등급 입력"}</div>
+              </button>
+              <button className="quick-card" type="button" onClick={() => setSection("전략센터")}>
+                <div className="quick-icon">✨</div>
+                <div className="quick-title">전략센터</div>
+                <div className="quick-body">{studentStrategy ? `${studentStrategy.level} · ${studentStrategy.total}점` : "성적·SWOT·세특·수시 전략"}</div>
               </button>
               <button className="quick-card" type="button" onClick={() => setSection("로드맵")}>
                 <div className="quick-icon">🧭</div>
@@ -3203,6 +3843,13 @@ export default function App() {
             ) : (
               <div className="empty" style={{ padding:"40px 20px" }}><div style={{ fontSize:40, marginBottom:14 }}>📈</div><div style={{ fontSize:15 }}>성적을 입력하면 추이 그래프가 나타납니다</div></div>
             )}
+          </>}
+
+          {/* 전략센터 */}
+          {section === "전략센터" && <>
+            <div className="ptitle">전략센터</div>
+            <div className="psub">SUMMIT의 핵심 기능을 학생과 선생님이 바로 이해할 수 있는 리포트로 줄였습니다.</div>
+            <StrategyReport report={studentStrategy} />
           </>}
 
           {/* 로드맵 */}
@@ -3593,7 +4240,7 @@ export default function App() {
           {STUDENT_NAV.map(([k, ic, lb]) => (
             <button key={k} className={`mobile-nav-btn${section === k ? " active" : ""}`} type="button" onClick={() => setSection(k)}>
               <span>{ic}</span>
-              {k === "생활기록부" ? "생기부" : k === "과제점검" ? "과제" : lb}
+              {k === "생활기록부" ? "생기부" : k === "전략센터" ? "전략" : k === "과제점검" ? "과제" : lb}
             </button>
           ))}
         </nav>
