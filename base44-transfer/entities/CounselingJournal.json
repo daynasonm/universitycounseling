@@ -1,0 +1,53 @@
+{
+  "name": "CounselingJournal",
+  "type": "object",
+  "properties": {
+    "student_user_id": {
+      "type": "string",
+      "description": "학생 User id"
+    },
+    "student_name": {
+      "type": "string",
+      "description": "학생 이름"
+    },
+    "student_email": {
+      "type": "string",
+      "format": "email",
+      "description": "학생 이메일"
+    },
+    "counselor_user_id": {
+      "type": "string",
+      "description": "상담사 User id"
+    },
+    "counselor_name": {
+      "type": "string",
+      "description": "작성한 상담사 이름"
+    },
+    "date": {
+      "type": "string",
+      "format": "date",
+      "description": "상담 날짜"
+    },
+    "topic": {
+      "type": "string",
+      "enum": [
+        "생활기록부 검토",
+        "목표대학 상담",
+        "성적 분석",
+        "자기소개서 첨삭",
+        "전형 전략",
+        "기타"
+      ],
+      "description": "상담 주제"
+    },
+    "summary": {
+      "type": "string",
+      "description": "상담사가 남기는 상담 내용"
+    },
+    "next_steps": {
+      "type": "string",
+      "description": "다음 상담 전 확인할 내용"
+    }
+  },
+  "required": ["student_user_id", "date", "topic", "summary"]
+}

@@ -1,0 +1,126 @@
+@import url("https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700;800&display=swap");
+
+:root {
+  --font-sans: "Noto Sans KR", sans-serif;
+  --background: 210 45% 97%;
+  --foreground: 222 53% 9%;
+  --card: 0 0% 100%;
+  --card-foreground: 222 53% 9%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 222 53% 9%;
+  --primary: 199 89% 48%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 217 38% 95%;
+  --secondary-foreground: 222 53% 9%;
+  --muted: 217 38% 95%;
+  --muted-foreground: 215 13% 47%;
+  --accent: 24 95% 53%;
+  --accent-foreground: 0 0% 100%;
+  --destructive: 0 72% 51%;
+  --destructive-foreground: 0 0% 100%;
+  --border: 220 13% 91%;
+  --input: 220 13% 91%;
+  --ring: 199 89% 48%;
+  --chart-1: 199 89% 48%;
+  --chart-2: 24 95% 53%;
+  --chart-3: 222 100% 17%;
+  --chart-4: 210 17% 91%;
+  --chart-5: 222 53% 9%;
+  --radius: 1rem;
+  --sidebar-background: 0 0% 100%;
+  --sidebar-foreground: 222 53% 9%;
+  --sidebar-primary: 199 89% 48%;
+  --sidebar-primary-foreground: 0 0% 100%;
+  --sidebar-accent: 199 100% 96%;
+  --sidebar-accent-foreground: 222 100% 17%;
+  --sidebar-border: 220 13% 91%;
+  --sidebar-ring: 199 89% 48%;
+}
+
+body {
+  background:
+    linear-gradient(rgba(14, 165, 233, 0.07) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(14, 165, 233, 0.07) 1px, transparent 1px),
+    linear-gradient(135deg, #eef8ff 0%, #f7fafd 44%, #fff7f0 100%);
+  background-size: 44px 44px, 44px 44px, 100% 100%;
+  color: #0b1324;
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+
+.text-2xl {
+  font-size: 1.5rem !important;
+  line-height: 1.28 !important;
+  letter-spacing: -0.02em !important;
+}
+
+.text-xl {
+  font-size: 1.25rem !important;
+  line-height: 1.25 !important;
+  letter-spacing: -0.015em !important;
+}
+
+.text-lg {
+  font-size: 1.125rem !important;
+  line-height: 1.35 !important;
+  letter-spacing: -0.01em !important;
+}
+
+.text-sm {
+  font-size: 0.875rem !important;
+  line-height: 1.55 !important;
+}
+
+.text-xs {
+  font-size: 0.75rem !important;
+  line-height: 1.45 !important;
+}
+
+.font-bold {
+  font-weight: 700 !important;
+}
+
+.bg-card,
+[class*="bg-card"] {
+  background-color: rgba(255, 255, 255, 0.72) !important;
+  backdrop-filter: blur(20px) saturate(155%);
+}
+
+.border-border {
+  border-color: rgba(255, 255, 255, 0.74) !important;
+}
+
+.shadow-sm {
+  box-shadow: 0 16px 40px rgba(11, 19, 36, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.72) !important;
+}
+
+.text-foreground {
+  color: #0b1324 !important;
+}
+
+.text-primary {
+  color: #0ea5e9 !important;
+}
+
+.bg-primary {
+  background-color: #0ea5e9 !important;
+}
+
+.border-primary {
+  border-color: #0ea5e9 !important;
+}
+
+.bg-primary\/10 {
+  background-color: rgba(14, 165, 233, 0.12) !important;
+}
+
+.text-accent {
+  color: #f97316 !important;
+}
+
+.bg-accent,
+.bg-accent\/10 {
+  background-color: rgba(249, 115, 22, 0.12) !important;
+}

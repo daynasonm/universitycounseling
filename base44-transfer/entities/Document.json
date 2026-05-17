@@ -1,0 +1,39 @@
+{
+  "name": "Document",
+  "type": "object",
+  "properties": {
+    "student_user_id": {
+      "type": "string",
+      "description": "학생 User id"
+    },
+    "title": {
+      "type": "string",
+      "description": "문서명"
+    },
+    "doc_type": {
+      "type": "string",
+      "enum": ["생활기록부", "성적표", "자기소개서", "추천서", "기타"],
+      "description": "문서 유형"
+    },
+    "file_url": {
+      "type": "string",
+      "description": "업로드된 파일 URL"
+    },
+    "status": {
+      "type": "string",
+      "enum": ["업로드", "분석중", "분석완료", "보완필요"],
+      "default": "업로드",
+      "description": "문서 상태"
+    },
+    "version": {
+      "type": "number",
+      "default": 1,
+      "description": "문서 버전"
+    },
+    "analysis_summary": {
+      "type": "string",
+      "description": "문서 분석 요약"
+    }
+  },
+  "required": ["title", "doc_type"]
+}

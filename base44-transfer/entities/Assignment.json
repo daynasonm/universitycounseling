@@ -1,0 +1,42 @@
+{
+  "name": "Assignment",
+  "type": "object",
+  "properties": {
+    "student_user_id": {
+      "type": "string",
+      "description": "학생 User id"
+    },
+    "source": {
+      "type": "string",
+      "enum": ["상담사", "학교", "학원"],
+      "description": "과제 출처"
+    },
+    "subject": {
+      "type": "string",
+      "description": "과목 또는 분류"
+    },
+    "title": {
+      "type": "string",
+      "description": "과제명"
+    },
+    "teacher": {
+      "type": "string",
+      "description": "과제를 준 선생님 또는 기관"
+    },
+    "due_date": {
+      "type": "string",
+      "description": "마감일"
+    },
+    "notes": {
+      "type": "string",
+      "description": "과제 메모"
+    },
+    "status": {
+      "type": "string",
+      "enum": ["해야할것", "하는중", "검사중"],
+      "default": "해야할것",
+      "description": "과제 상태"
+    }
+  },
+  "required": ["title", "status"]
+}

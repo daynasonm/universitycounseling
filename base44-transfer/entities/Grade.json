@@ -1,0 +1,30 @@
+{
+  "name": "Grade",
+  "type": "object",
+  "properties": {
+    "student_user_id": {
+      "type": "string",
+      "description": "학생 User id"
+    },
+    "semester": {
+      "type": "string",
+      "enum": ["고1-1", "고1-2", "고2-1", "고2-2", "고3-1"],
+      "description": "학기"
+    },
+    "subject": {
+      "type": "string",
+      "description": "과목"
+    },
+    "grade": {
+      "type": "number",
+      "minimum": 1,
+      "maximum": 9,
+      "description": "석차등급"
+    },
+    "memo": {
+      "type": "string",
+      "description": "성적 관련 메모"
+    }
+  },
+  "required": ["semester", "subject", "grade"]
+}

@@ -1,0 +1,102 @@
+{
+  "name": "StudentProfile",
+  "type": "object",
+  "properties": {
+    "user_id": {
+      "type": "string",
+      "description": "Base44 User id"
+    },
+    "name": {
+      "type": "string",
+      "description": "학생 이름"
+    },
+    "email": {
+      "type": "string",
+      "format": "email",
+      "description": "학생 이메일"
+    },
+    "high_school": {
+      "type": "string",
+      "description": "현재 다니는 고등학교"
+    },
+    "preferred_major": {
+      "type": "string",
+      "description": "학생이 희망하는 학과"
+    },
+    "grade_level": {
+      "type": "string",
+      "enum": ["고1", "고2", "고3", "1학년", "2학년", "3학년"],
+      "description": "학년"
+    },
+    "class_name": {
+      "type": "string",
+      "description": "반"
+    },
+    "counselor": {
+      "type": "string",
+      "description": "담당 상담사"
+    },
+    "target_track": {
+      "type": "string",
+      "enum": ["수시", "정시", "학종", "논술", "미정"],
+      "description": "목표 전형"
+    },
+    "core_avg": {
+      "type": "number",
+      "description": "국수영 평균 등급"
+    },
+    "target_count": {
+      "type": "number",
+      "description": "목표 대학 수"
+    },
+    "record_status": {
+      "type": "string",
+      "enum": ["미업로드", "업로드", "분석완료"],
+      "default": "미업로드",
+      "description": "생활기록부 상태"
+    },
+    "record_file_name": {
+      "type": "string",
+      "description": "업로드한 생활기록부 파일명"
+    },
+    "record_text": {
+      "type": "string",
+      "description": "생활기록부 원문 텍스트"
+    },
+    "record_ai_score": {
+      "type": "number",
+      "description": "생활기록부 AI 분석 점수"
+    },
+    "record_ai_level": {
+      "type": "string",
+      "description": "생활기록부 AI 분석 등급"
+    },
+    "record_strengths": {
+      "type": "string",
+      "description": "생활기록부 충분한 점"
+    },
+    "record_gaps": {
+      "type": "string",
+      "description": "생활기록부 부족한 점"
+    },
+    "record_actions": {
+      "type": "string",
+      "description": "생활기록부 보완 액션"
+    },
+    "essay_status": {
+      "type": "string",
+      "enum": ["작성전", "작성중", "초안완료"],
+      "default": "작성전",
+      "description": "자소서 작성 상태"
+    },
+    "essay_drafts": {
+      "type": "object",
+      "description": "문항별 자기소개서 초안"
+    },
+    "notes": {
+      "type": "string",
+      "description": "상담사가 보는 학생 메모"
+    }
+  },
+  "required": ["user_id", "name"]
+}

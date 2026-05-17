@@ -1,0 +1,88 @@
+{
+  "name": "CounselorMeeting",
+  "type": "object",
+  "properties": {
+    "date": {
+      "type": "string",
+      "format": "date",
+      "description": "상담 예약 날짜"
+    },
+    "time_slot": {
+      "type": "string",
+      "description": "상담 시간대 (예: 09:00)"
+    },
+    "topic": {
+      "type": "string",
+      "enum": [
+        "생활기록부 검토",
+        "목표대학 상담",
+        "성적 분석",
+        "자기소개서 첨삭",
+        "전형 전략",
+        "기타"
+      ],
+      "description": "상담 주제"
+    },
+    "notes": {
+      "type": "string",
+      "description": "학생이 선생님께 미리 전달하는 내용"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "요청됨",
+        "컨펌됨",
+        "완료",
+        "취소됨",
+        "이메일발송"
+      ],
+      "default": "요청됨",
+      "description": "상담 진행 상태"
+    },
+    "student_user_id": {
+      "type": "string",
+      "description": "학생 User id"
+    },
+    "student_name": {
+      "type": "string",
+      "description": "학생 이름"
+    },
+    "student_email": {
+      "type": "string",
+      "format": "email",
+      "description": "학생 이메일"
+    },
+    "student_high_school": {
+      "type": "string",
+      "description": "현재 다니는 고등학교"
+    },
+    "student_preferred_major": {
+      "type": "string",
+      "description": "학생이 희망하는 학과"
+    },
+    "student_grade_level": {
+      "type": "string",
+      "enum": ["고1", "고2", "고3", "1학년", "2학년", "3학년"],
+      "description": "학생 학년"
+    },
+    "student_class_name": {
+      "type": "string",
+      "description": "학생 반"
+    },
+    "counselor_name": {
+      "type": "string",
+      "description": "담당 상담사 이름"
+    },
+    "confirmed_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "상담 컨펌 시간"
+    },
+    "email_sent_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "확인 이메일 작성 시간"
+    }
+  },
+  "required": ["date", "time_slot", "topic", "status"]
+}

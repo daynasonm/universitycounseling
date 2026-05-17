@@ -1,0 +1,11 @@
+{
+  "appId": "com.universitycounseling.planner",
+  "appName": "입시플래너",
+  "webDir": "dist",
+  "server": {
+    "androidScheme": "https"
+  },
+  "ios": {
+    "contentInset": "always"
+  }
+}

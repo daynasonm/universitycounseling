@@ -1,0 +1,56 @@
+{
+  "name": "TargetUniversity",
+  "type": "object",
+  "properties": {
+    "university_id": {
+      "type": "string",
+      "description": "내부 대학 id"
+    },
+    "university_name": {
+      "type": "string",
+      "description": "대학명"
+    },
+    "short_name": {
+      "type": "string",
+      "description": "짧은 대학명"
+    },
+    "department": {
+      "type": "string",
+      "description": "관심 학과"
+    },
+    "region": {
+      "type": "string",
+      "description": "지역"
+    },
+    "school_type": {
+      "type": "string",
+      "enum": ["국립", "사립"],
+      "description": "국립/사립"
+    },
+    "tier": {
+      "type": "string",
+      "description": "대학군"
+    },
+    "admission_type": {
+      "type": "string",
+      "enum": ["수시", "정시", "학종", "논술", "미정"],
+      "default": "수시",
+      "description": "우선 검토 전형"
+    },
+    "match_label": {
+      "type": "string",
+      "enum": ["도전", "적정", "안정", "미분석"],
+      "default": "미분석",
+      "description": "현재 성적 기준 적합도"
+    },
+    "student_user_id": {
+      "type": "string",
+      "description": "학생 User id"
+    },
+    "notes": {
+      "type": "string",
+      "description": "학생 또는 상담사 메모"
+    }
+  },
+  "required": ["university_name"]
+}
