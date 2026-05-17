@@ -1,5 +1,17 @@
 import React, { useEffect, useState, useRef } from "react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
+import {
+  supabaseEnabled,
+  loadBackendState,
+  signInBackend,
+  signUpBackend,
+  signOutBackend,
+  saveBackendProfile,
+  upsertBackendRequests,
+  upsertBackendJournals,
+  deleteBackendJournal,
+  runAiAnalysis,
+} from "./services/supabaseBackend";
 
 const UNIVS = [
   { id:"snu", name:"서울대학교", short:"서울대", region:"서울", type:"국립", tier:1, color:"#1B3A6B",
@@ -1452,6 +1464,9 @@ select:focus{border-color:#0EA5E9;}
 .record-block:last-child{border-bottom:none;padding-bottom:0;}
 .record-text-card{display:grid;gap:12px;}
 .record-text-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;}
+.record-ai-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end;}
+.ai-notice{margin:10px 0 12px;border:1px solid #FDE68A;border-radius:14px;background:#FFFBEB;color:#92400E;font-size:12.5px;line-height:1.55;font-weight:700;padding:10px 12px;}
+.ai-notice.done{border-color:rgba(14,165,233,0.22);background:var(--brand-blue-soft);color:var(--brand-blue);}
 .record-textarea{width:100%;min-height:220px;border:1px solid #E1E7EF;border-radius:16px;background:rgba(248,250,252,0.86);padding:15px 16px;color:#202632;font-size:14px;line-height:1.75;resize:vertical;outline:none;font-family:'Noto Sans KR',sans-serif;box-shadow:inset 0 1px 0 rgba(255,255,255,0.74);}
 .record-textarea:focus{border-color:#0EA5E9;box-shadow:0 0 0 3px rgba(14,165,233,0.10),inset 0 1px 0 rgba(255,255,255,0.74);}
 .record-text-hint{font-size:12px;line-height:1.6;color:#9AA6B2;}
@@ -2112,11 +2127,13 @@ function StrategyReport({ report, compact = false }) {
 }
 
 export default function App() {
-  const [users, setUsers] = useState(loadUsers);
-  const [profiles, setProfiles] = useState(loadProfiles);
-  const [requests, setRequests] = useState(loadRequests);
-  const [counselingJournals, setCounselingJournals] = useState(loadCounselingJournals);
-  const [currentUserId, setCurrentUserId] = useState(() => readJson(SESSION_KEY, null));
+  const [users, setUsers] = useState(() => supabaseEnabled ? [] : loadUsers());
+  const [profiles, setProfiles] = useState(() => supabaseEnabled ? {} : loadProfiles());
+  const [requests, setRequests] = useState(() => supabaseEnabled ? [] : loadRequests());
+  const [counselingJournals, setCounselingJournals] = useState(() => supabaseEnabled ? [] : loadCounselingJournals());
+  const [currentUserId, setCurrentUserId] = useState(() => supabaseEnabled ? null : readJson(SESSION_KEY, null));
+  const [backendReady, setBackendReady] = useState(!supabaseEnabled);
+  const [backendError, setBackendError] = useState("");
   const [authMode, setAuthMode] = useState("login");
   const [authForm, setAuthForm] = useState({ name:"", email:"", password:"", role:"student", gradeLevel:"3학년", className:"3-1", highSchool:"", preferredMajor:"" });
   const [authError, setAuthError] = useState("");
@@ -2161,9 +2178,41 @@ export default function App() {
   const [fname, setFname] = useState("");
   const [recordPreview, setRecordPreview] = useState(null);
   const [recordPreviewOpen, setRecordPreviewOpen] = useState(false);
+  const [aiBusy, setAiBusy] = useState(false);
+  const [aiNotice, setAiNotice] = useState("");
   const fileRef = useRef(null);
   const currentUser = users.find(u => u.id === currentUserId) || null;
   const currentRole = currentUser?.role;
+
+  const applyBackendState = state => {
+    setUsers(state.users || []);
+    setProfiles(state.profiles || {});
+    setRequests(state.requests || []);
+    setCounselingJournals(state.journals || []);
+    setCurrentUserId(state.currentUser?.id || null);
+    setBackendError("");
+    localStorage.removeItem(SESSION_KEY);
+  };
+
+  useEffect(() => {
+    if (!supabaseEnabled) return;
+    let cancelled = false;
+    setBackendReady(false);
+    loadBackendState()
+      .then(state => {
+        if (cancelled) return;
+        applyBackendState(state);
+      })
+      .catch(error => {
+        if (!cancelled) setBackendError(error.message || "Supabase 연결에 실패했습니다.");
+      })
+      .finally(() => {
+        if (!cancelled) setBackendReady(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     if (!currentUserId || users.some(u => u.id === currentUserId)) return;
@@ -2212,7 +2261,8 @@ export default function App() {
     if (!profiles[currentUser.id]) {
       setProfiles(prev => {
         const next = { ...prev, [currentUser.id]: profile };
-        writeJson(PROFILES_KEY, next);
+        if (supabaseEnabled) saveBackendProfile(currentUser.id, profile).catch(error => setBackendError(error.message));
+        else writeJson(PROFILES_KEY, next);
         return next;
       });
     }
@@ -2232,14 +2282,16 @@ export default function App() {
 
   useEffect(() => {
     if (!currentUser || currentUser.role !== "student" || !profileReady) return;
+    const nextProfile = createProfile({ targets, grades, gibpu, fname, essays, checklist, assignments });
     setProfiles(prev => {
       const next = {
         ...prev,
-        [currentUser.id]: createProfile({ targets, grades, gibpu, fname, essays, checklist, assignments }),
+        [currentUser.id]: nextProfile,
       };
-      writeJson(PROFILES_KEY, next);
+      if (!supabaseEnabled) writeJson(PROFILES_KEY, next);
       return next;
     });
+    if (supabaseEnabled) saveBackendProfile(currentUser.id, nextProfile).catch(error => setBackendError(error.message));
   }, [targets, grades, gibpu, fname, essays, checklist, assignments, currentUser?.id, currentUser?.role, profileReady]);
 
   useEffect(() => {
@@ -2255,7 +2307,7 @@ export default function App() {
 
   const startSession = user => {
     setCurrentUserId(user.id);
-    writeJson(SESSION_KEY, user.id);
+    if (!supabaseEnabled) writeJson(SESSION_KEY, user.id);
     setAuthForm({ name:"", email:"", password:"", role:"student", gradeLevel:"3학년", className:"3-1", highSchool:"", preferredMajor:"" });
     setAuthError("");
   };
@@ -2265,7 +2317,7 @@ export default function App() {
     startSession(user);
   };
 
-  const handleAuthSubmit = e => {
+  const handleAuthSubmit = async e => {
     e.preventDefault();
     const email = normalizeEmail(authForm.email);
     const password = authForm.password.trim();
@@ -2286,12 +2338,37 @@ export default function App() {
     }
 
     if (authMode === "login") {
+      if (supabaseEnabled) {
+        try {
+          setAuthError("");
+          const state = await signInBackend(email, password);
+          applyBackendState(state);
+        } catch (error) {
+          setAuthError(error.message || "로그인에 실패했습니다.");
+        }
+        return;
+      }
       const user = users.find(u => u.email === email);
       if (!user || user.password !== password) {
         setAuthError("이메일 또는 비밀번호가 올바르지 않습니다.");
         return;
       }
       startSession(user);
+      return;
+    }
+
+    if (supabaseEnabled) {
+      try {
+        setAuthError("");
+        const state = await signUpBackend({ ...authForm, email, password });
+        if (state?.needsEmailConfirmation) {
+          setAuthError("확인 이메일을 보냈습니다. 메일 인증 후 로그인해주세요. 테스트 중이면 Supabase Auth에서 email confirmation을 꺼도 됩니다.");
+          return;
+        }
+        applyBackendState(state);
+      } catch (error) {
+        setAuthError(error.message || "회원가입에 실패했습니다.");
+      }
       return;
     }
 
@@ -2324,7 +2401,8 @@ export default function App() {
     startSession(user);
   };
 
-  const logout = () => {
+  const logout = async () => {
+    if (supabaseEnabled) await signOutBackend();
     localStorage.removeItem(SESSION_KEY);
     setCurrentUserId(null);
     setProfileReady(false);
@@ -2359,7 +2437,8 @@ export default function App() {
   const updateRequests = updater => {
     setRequests(prev => {
       const next = typeof updater === "function" ? updater(prev) : updater;
-      writeJson(REQUESTS_KEY, next);
+      if (supabaseEnabled) upsertBackendRequests(next).catch(error => setBackendError(error.message));
+      else writeJson(REQUESTS_KEY, next);
       return next;
     });
   };
@@ -2367,7 +2446,8 @@ export default function App() {
   const updateCounselingJournals = updater => {
     setCounselingJournals(prev => {
       const next = typeof updater === "function" ? updater(prev) : updater;
-      writeJson(JOURNALS_KEY, next);
+      if (supabaseEnabled) upsertBackendJournals(next).catch(error => setBackendError(error.message));
+      else writeJson(JOURNALS_KEY, next);
       return next;
     });
   };
@@ -2631,6 +2711,7 @@ export default function App() {
 
   const deleteCounselingJournal = id => {
     updateCounselingJournals(prev => prev.filter(journal => journal.id !== id));
+    if (supabaseEnabled) deleteBackendJournal(id).catch(error => setBackendError(error.message));
     if (expandedJournalId === id) setExpandedJournalId(null);
     setJournalNotice("상담 기록이 삭제되었습니다.");
   };
@@ -2659,7 +2740,8 @@ export default function App() {
       const existingAssignments = existingProfile.assignments?.length ? existingProfile.assignments : DEFAULT_ASSIGNMENTS;
       const nextProfile = { ...existingProfile, assignments: [nextAssignment, ...existingAssignments] };
       const next = { ...prev, [profileStudent.user.id]: nextProfile };
-      writeJson(PROFILES_KEY, next);
+      if (supabaseEnabled) saveBackendProfile(profileStudent.user.id, nextProfile).catch(error => setBackendError(error.message));
+      else writeJson(PROFILES_KEY, next);
       return next;
     });
     setAssignmentForm(ASSIGNMENT_FORM_DEFAULT);
@@ -2673,7 +2755,8 @@ export default function App() {
       const existingAssignments = existingProfile.assignments?.length ? existingProfile.assignments : DEFAULT_ASSIGNMENTS;
       const nextProfile = { ...existingProfile, assignments: existingAssignments.filter(item => item.id !== id) };
       const next = { ...prev, [profileStudent.user.id]: nextProfile };
-      writeJson(PROFILES_KEY, next);
+      if (supabaseEnabled) saveBackendProfile(profileStudent.user.id, nextProfile).catch(error => setBackendError(error.message));
+      else writeJson(PROFILES_KEY, next);
       return next;
     });
     setAssignmentNotice("과제가 삭제되었습니다. 학생 과제 보드에서도 제거됩니다.");
@@ -2686,6 +2769,49 @@ export default function App() {
 
   const updateEssayDraft = (id, value) => {
     setEssays(prev => ({ ...createEmptyEssays(), ...prev, [id]: value }));
+  };
+
+  const runRecordAgentAnalysis = async () => {
+    const recordText = gibpu && !gibpu.error ? gibpu.원문 || "" : "";
+    if (!recordText.trim()) {
+      setAiNotice("생활기록부 원문을 먼저 입력해주세요.");
+      return;
+    }
+    if (!supabaseEnabled) {
+      setAiNotice("Supabase 연결 후 진짜 AI 에이전트 분석을 사용할 수 있습니다. 지금은 규칙 기반 분석이 작동 중입니다.");
+      return;
+    }
+    setAiBusy(true);
+    setAiNotice("");
+    try {
+      const data = await runAiAnalysis({
+        kind: "record",
+        preferredMajor: currentUser?.preferredMajor || "",
+        recordText,
+        grades,
+        targets,
+      });
+      const analysis = data.analysis;
+      if (!analysis) throw new Error("AI 분석 결과가 비어 있습니다.");
+      setGibpu(prev => ({
+        ...(prev && !prev.error ? prev : createRecordUploadSummary({ name:"생활기록부 원문 입력", type:"text/plain", size:0 }, currentUser?.preferredMajor || "")),
+        AI분석: {
+          score: Math.round(Number(analysis.score) || 0),
+          level: analysis.level || "AI 분석",
+          summary: analysis.summary || "",
+          strengths: analysis.strengths || [],
+          gaps: [...(analysis.gaps || []), ...(analysis.risks || []).map(item => `리스크: ${item}`)],
+          actions: analysis.actions || [],
+          counselorNotes: analysis.counselorNotes || [],
+          nextQuestions: analysis.nextQuestions || [],
+        },
+      }));
+      setAiNotice(`${data.model || "AI"} 에이전트 분석이 완료되었습니다.`);
+    } catch (error) {
+      setAiNotice(error.message || "AI 에이전트 분석에 실패했습니다.");
+    } finally {
+      setAiBusy(false);
+    }
   };
 
   const shiftBookingWeek = days => {
@@ -2717,6 +2843,20 @@ export default function App() {
     }
     finally { setParsing(false); }
   };
+
+  if (!backendReady) {
+    return (
+      <>
+        <style>{css}</style>
+        <main className="auth-root">
+          <div style={{ textAlign:"center", color:"#6B7684" }}>
+            <div className="spinner" />
+            <div>Supabase 계정 정보를 불러오는 중입니다...</div>
+          </div>
+        </main>
+      </>
+    );
+  }
 
   if (!currentUser) {
     return (
@@ -2788,10 +2928,13 @@ export default function App() {
               {authError && <div className="auth-error">{authError}</div>}
               <button className="primary-btn" type="submit">{authMode === "login" ? "로그인" : "가입하기"}</button>
 
-              <div className="ghost-row">
-                <button type="button" className="ghost-btn" onClick={() => loginWithUser(users.find(u => u.email === "minseo@student.test"))}>학생 체험</button>
-                <button type="button" className="ghost-btn" onClick={() => loginWithUser(users.find(u => u.email === "counselor@test.com"))}>상담사 체험</button>
-              </div>
+              {backendError && <div className="auth-error">{backendError}</div>}
+              {!supabaseEnabled && (
+                <div className="ghost-row">
+                  <button type="button" className="ghost-btn" onClick={() => loginWithUser(users.find(u => u.email === "minseo@student.test"))}>학생 체험</button>
+                  <button type="button" className="ghost-btn" onClick={() => loginWithUser(users.find(u => u.email === "counselor@test.com"))}>상담사 체험</button>
+                </div>
+              )}
             </form>
           </div>
         </div>
@@ -3954,8 +4097,14 @@ export default function App() {
                   <div className="secl">생활기록부 원문</div>
                   <div className="record-text-hint">사진이나 PDF에 있는 내용을 옮겨 적거나 OCR 결과를 붙여넣으면, 아래 AI 분석이 바로 업데이트됩니다.</div>
                 </div>
-                <span className="status-pill sent">{(gibpu && !gibpu.error ? gibpu.원문 || "" : "").length}자</span>
+                <div className="record-ai-actions">
+                  <span className="status-pill sent">{(gibpu && !gibpu.error ? gibpu.원문 || "" : "").length}자</span>
+                  <button className="small-primary" type="button" onClick={runRecordAgentAnalysis} disabled={aiBusy}>
+                    {aiBusy ? "AI 분석 중" : "AI 에이전트 분석"}
+                  </button>
+                </div>
               </div>
+              {aiNotice && <div className={`ai-notice${aiNotice.includes("완료") ? " done" : ""}`}>{aiNotice}</div>}
               <textarea
                 className="record-textarea"
                 value={gibpu && !gibpu.error ? gibpu.원문 || "" : ""}
