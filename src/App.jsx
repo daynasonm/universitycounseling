@@ -81,6 +81,7 @@ const UNIVS = [
 
 const CAREERNET_API_KEY = (import.meta.env?.VITE_CAREERNET_API_KEY || "").trim();
 const CAREERNET_SCHOOL_API_URL = "https://www.career.go.kr/cnet/openapi/getOpenApi";
+const CAREERNET_TEST_API_URL = "https://www.career.go.kr/inspct/openapi/v2/tests";
 const UNIVERSITY_REGIONS = ["서울","경기","인천","부산","대전","대구","광주","울산","세종","강원","충북","충남","전북","전남","경북","경남","제주"];
 const REGION_NAME_MAP = {
   "서울특별시":"서울",
@@ -202,6 +203,7 @@ const mergeUniversityCatalog = rows => {
   return [...map.values()];
 };
 const asArray = value => Array.isArray(value) ? value : value ? [value] : [];
+const stripHtml = value => String(value || "").replace(/<br\s*\/?>/gi, " ").replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim();
 const careerNetSchoolToUniversity = (item, index) => {
   const name = item.schoolName;
   if (!name) return null;
@@ -214,23 +216,78 @@ const careerNetSchoolToUniversity = (item, index) => {
     collegeInfoUrl: item.collegeinfourl,
   };
 };
-async function loadCareerNetUniversities() {
+const careerNetMajorToOption = item => {
+  const name = item.mClass || item.facilName?.split(",")?.[0];
+  if (!name) return null;
+  return {
+    id: `careernet-major-${item.majorSeq || universitySlug(name)}`,
+    name,
+    field: item.lClass || "학과",
+    aliases: String(item.facilName || "").split(",").map(value => value.trim()).filter(Boolean).slice(0, 12),
+    source: "careernet",
+  };
+};
+const mergeDepartmentOptions = (base = [], apiMajors = []) => {
+  const apiNames = apiMajors.map(major => major.name).filter(Boolean);
+  return [...new Set([...base, ...apiNames])].sort((a, b) => a.localeCompare(b, "ko"));
+};
+const departmentOptionsForUniversity = (univ, apiMajors = []) => mergeDepartmentOptions(univ?.depts || [], apiMajors);
+async function fetchCareerNetPaged(baseParams, mapper, maxPages = 6) {
   if (!CAREERNET_API_KEY) return [];
-  const params = new URLSearchParams({
-    apiKey: CAREERNET_API_KEY,
-    svcType: "api",
-    svcCode: "SCHOOL",
-    contentType: "json",
-    gubun: "대학교",
-    sch1: "100323",
-    perPage: "500",
-    thisPage: "1",
-  });
-  const response = await fetch(`${CAREERNET_SCHOOL_API_URL}?${params.toString()}`);
-  if (!response.ok) throw new Error("CareerNet university API request failed");
+  const all = [];
+  let total = 0;
+  for (let page = 1; page <= maxPages; page += 1) {
+    const params = new URLSearchParams({
+      apiKey: CAREERNET_API_KEY,
+      svcType: "api",
+      contentType: "json",
+      perPage: "500",
+      thisPage: String(page),
+      ...baseParams,
+    });
+    const response = await fetch(`${CAREERNET_SCHOOL_API_URL}?${params.toString()}`);
+    if (!response.ok) throw new Error("CareerNet API request failed");
+    const payload = await response.json();
+    const rows = asArray(payload?.dataSearch?.content);
+    if (!rows.length) break;
+    total = Number(rows[0]?.totalCount || total || rows.length);
+    all.push(...rows.map((row, index) => mapper(row, all.length + index)).filter(Boolean));
+    if (!total || all.length >= total) break;
+  }
+  return all;
+}
+const loadCareerNetUniversities = () => fetchCareerNetPaged(
+  { svcCode:"SCHOOL", gubun:"univ_list" },
+  careerNetSchoolToUniversity,
+);
+const loadCareerNetMajors = () => fetchCareerNetPaged(
+  { svcCode:"MAJOR", gubun:"univ_list" },
+  careerNetMajorToOption,
+);
+async function loadCareerNetTests() {
+  if (!CAREERNET_API_KEY) return [];
+  const params = new URLSearchParams({ apikey: CAREERNET_API_KEY });
+  const response = await fetch(`${CAREERNET_TEST_API_URL}?${params.toString()}`);
+  if (!response.ok) throw new Error("CareerNet test API request failed");
   const payload = await response.json();
-  const rows = asArray(payload?.dataSearch?.content);
-  return rows.map(careerNetSchoolToUniversity).filter(Boolean);
+  return asArray(payload?.result).map(item => ({
+    name: item.name || "커리어넷 검사",
+    type: "API 심리검사",
+    status: `API 연결 · ${item.qcount || "-"}문항`,
+    desc: stripHtml(item.description || item.summary || ""),
+    qno: item.qno,
+    exectime: item.exectime,
+    source: "careernet",
+  }));
+}
+async function loadCareerNetData() {
+  if (!CAREERNET_API_KEY) return { universities:[], majors:[], tests:[] };
+  const [universities, majors, tests] = await Promise.all([
+    loadCareerNetUniversities(),
+    loadCareerNetMajors(),
+    loadCareerNetTests().catch(() => []),
+  ]);
+  return { universities, majors, tests };
 }
 const departmentFilterMatches = (univ, filterKey) => {
   if (filterKey === "all") return true;
@@ -669,11 +726,20 @@ const SETECH_GUIDES = {
 };
 
 const CAREER_TESTS = [
-  { name:"진로심리검사", type:"적성/가치관", status:"커리어넷 연동 예정", desc:"진로 방향이 아직 넓을 때 먼저 보는 기본 검사" },
-  { name:"직업흥미검사(K)", type:"흥미", status:"커리어넷 연동 예정", desc:"좋아하는 활동 유형을 기준으로 직업군을 좁히는 검사" },
-  { name:"직업흥미검사(H)", type:"흥미", status:"커리어넷 연동 예정", desc:"흥미 프로파일을 더 세분화해 학과 후보와 연결" },
-  { name:"직업적성검사", type:"적성", status:"커리어넷 연동 예정", desc:"잘하는 능력과 전공 요구 역량을 비교" },
+  { name:"진로심리검사", type:"종합", status:"커리어넷 검사 열기", desc:"진로 방향이 아직 넓을 때 먼저 보는 기본 검사", url:"https://www.career.go.kr/inspct/web/psycho" },
+  { name:"직업흥미검사(K)", type:"흥미", status:"커리어넷 검사 열기", desc:"좋아하는 활동 유형을 기준으로 직업군을 좁히는 검사", url:"https://www.career.go.kr/inspct/web/psycho/interest" },
+  { name:"직업흥미검사(H)", type:"흥미", status:"커리어넷 API + 검사 열기", desc:"흥미 프로파일을 더 세분화해 학과 후보와 연결", url:"https://www.career.go.kr/inspct/web/psycho/holland" },
+  { name:"직업적성검사", type:"적성", status:"커리어넷 검사 열기", desc:"잘하는 능력과 전공 요구 역량을 비교", url:"https://www.career.go.kr/cloud/w/inspect/student" },
 ];
+
+const mergeCareerTests = apiTests => {
+  const map = new Map(CAREER_TESTS.map(test => [test.name, test]));
+  apiTests.forEach(test => {
+    const base = map.get(test.name);
+    map.set(test.name, base ? { ...base, ...test, url: base.url } : test);
+  });
+  return [...map.values()];
+};
 
 const getSetechGuide = major => SETECH_GUIDES[getDepartmentField(major)] || SETECH_GUIDES["일반계열"];
 
@@ -827,7 +893,7 @@ const buildSusiCards = (user, profile, catalog, avgValue) => {
   return ordered.length >= 6 ? ordered.slice(0, 6) : [...ordered, ...cards.filter(card => !ordered.some(item => item.id === card.id))].slice(0, 6);
 };
 
-const buildStrategyReport = (user, profile, catalog = UNIVS) => {
+const buildStrategyReport = (user, profile, catalog = UNIVS, careerTests = CAREER_TESTS) => {
   const major = user?.preferredMajor || "학과 미입력";
   const guide = getSetechGuide(major);
   const diagnosis = buildMidtermDiagnosis(profile, major);
@@ -862,7 +928,7 @@ const buildStrategyReport = (user, profile, catalog = UNIVS) => {
     swot,
     susiCards,
     targetStats,
-    careerTests: CAREER_TESTS,
+    careerTests,
     roadmap: buildRoadmapState(profile?.checklist || {}),
     actionPlan: [
       diagnosis.actions[0],
@@ -1771,6 +1837,8 @@ select:focus{border-color:#0EA5E9;}
 .career-test-card span{display:block;font-size:11.5px;color:var(--brand-blue);font-weight:900;margin-top:2px;}
 .career-test-card p{font-size:12px;line-height:1.55;color:var(--brand-muted);margin:8px 0;}
 .career-test-card small{font-size:11px;color:var(--brand-subtle);font-weight:800;}
+.career-test-meta{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;}
+.career-test-meta a{display:inline-flex;align-items:center;border-radius:999px;background:var(--brand-blue-soft);color:var(--brand-blue);font-size:11.5px;font-weight:900;padding:5px 8px;text-decoration:none;}
 .admission-mini-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;}
 .admission-mini-card{border:1px solid var(--brand-border);border-radius:16px;background:#F8FAFC;padding:13px;}
 .admission-mini-top{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:6px;}
@@ -2091,21 +2159,24 @@ function StrategyReport({ report, compact = false }) {
           <div className="strategy-card-head">
             <div>
               <div className="strategy-label">진로·학과 탐색</div>
-              <h3>커리어넷 연동 전 미리 보는 검사 흐름</h3>
+              <h3>커리어넷 API로 검사와 학과 후보 연결</h3>
             </div>
-            <span className="strategy-tag">API 키 대기</span>
+            <span className="strategy-tag">{report.careerTests.some(test => test.source === "careernet") ? "커리어넷 API 연결됨" : "커리어넷 검사 링크"}</span>
           </div>
           <div className="career-test-grid">
-            {report.careerTests.map(test => (
-              <div key={test.name} className="career-test-card">
-                <div>
-                  <strong>{test.name}</strong>
-                  <span>{test.type}</span>
+              {report.careerTests.map(test => (
+                <div key={test.name} className="career-test-card">
+                  <div>
+                    <strong>{test.name}</strong>
+                    <span>{test.type}</span>
+                  </div>
+                  <p>{test.desc}</p>
+                  <div className="career-test-meta">
+                    <small>{test.exectime ? `${test.exectime}분 · ` : ""}{test.status}</small>
+                    {test.url && <a href={test.url} target="_blank" rel="noreferrer">검사 열기</a>}
+                  </div>
                 </div>
-                <p>{test.desc}</p>
-                <small>{test.status}</small>
-              </div>
-            ))}
+              ))}
           </div>
         </section>
       )}
@@ -2182,6 +2253,8 @@ export default function App() {
   const [selId, setSelId] = useState(null);
   const [query, setQuery] = useState("");
   const [apiUniversities, setApiUniversities] = useState([]);
+  const [apiMajors, setApiMajors] = useState([]);
+  const [careerTests, setCareerTests] = useState(CAREER_TESTS);
   const [universityApiStatus, setUniversityApiStatus] = useState(CAREERNET_API_KEY ? "loading" : "fallback");
   const [regionFilter, setRegionFilter] = useState("all");
   const [departmentFilter, setDepartmentFilter] = useState("all");
@@ -2250,11 +2323,13 @@ export default function App() {
 
   useEffect(() => {
     let cancelled = false;
-    loadCareerNetUniversities()
-      .then(rows => {
+    loadCareerNetData()
+      .then(({ universities, majors, tests }) => {
         if (cancelled) return;
-        if (rows.length) {
-          setApiUniversities(rows);
+        setApiMajors(majors || []);
+        setCareerTests(mergeCareerTests(tests || []));
+        if (universities.length || majors.length || tests.length) {
+          setApiUniversities(universities || []);
           setUniversityApiStatus("careernet");
         } else {
           setUniversityApiStatus("fallback");
@@ -2666,10 +2741,10 @@ export default function App() {
   const universityCatalog = mergeUniversityCatalog([...UNIVS, ...apiUniversities]);
   const currentStudentProfile = createProfile({ targets, grades, gibpu, fname, essays: essayDrafts, checklist, assignments });
   const studentStrategy = currentUser?.role === "student"
-    ? buildStrategyReport(currentUser, currentStudentProfile, universityCatalog)
+    ? buildStrategyReport(currentUser, currentStudentProfile, universityCatalog, careerTests)
     : null;
   const profileStrategy = profileStudent
-    ? buildStrategyReport(profileStudent.user, profileStudent.profile, universityCatalog)
+    ? buildStrategyReport(profileStudent.user, profileStudent.profile, universityCatalog, careerTests)
     : null;
   const profileTargetIds = new Set((profileStudent?.profile.targets || []).map(item => item.id));
   const profileRecordText = profileStudent?.profile.gibpu && !profileStudent.profile.gibpu.error ? profileStudent.profile.gibpu.원문 || "" : "";
@@ -2715,9 +2790,10 @@ export default function App() {
   const hasGrades = chartData.some(d => Object.keys(d).length > 1);
   const avg = coreAvg();
   const matchSel = sel ? getMatch(sel) : null;
-  const selectedDept = sel ? (addedTarget?.dept || sel.depts?.[0] || "") : "";
+  const selectedDepartmentOptions = sel ? departmentOptionsForUniversity(sel, apiMajors) : [];
+  const selectedDept = sel ? (addedTarget?.dept || selectedDepartmentOptions[0] || "") : "";
   const admissionStats = sel ? getLastYearAdmissionStats(sel, selectedDept) : null;
-  const departmentStats = sel ? sel.depts.map(dept => getLastYearAdmissionStats(sel, dept)) : [];
+  const departmentStats = sel ? selectedDepartmentOptions.slice(0, 80).map(dept => getLastYearAdmissionStats(sel, dept)) : [];
 
   const updateProfileStudentProfile = updater => {
     if (!profileStudent) return;
@@ -3596,7 +3672,7 @@ export default function App() {
                               <label htmlFor={`profile-target-dept-${t.id}`}>관심 학과</label>
                               <select id={`profile-target-dept-${t.id}`} className="auth-input" value={t.dept || ""} onChange={e => setProfileTargetDept(t.id, e.target.value)}>
                                 <option value="">학과 선택</option>
-                                {(t.depts || []).map(dept => <option key={dept} value={dept}>{dept}</option>)}
+                                {departmentOptionsForUniversity(t, apiMajors).map(dept => <option key={dept} value={dept}>{dept}</option>)}
                               </select>
                             </div>
                             <div className="target-stack">
@@ -4052,7 +4128,7 @@ export default function App() {
             {(query || activeUniversityFilters) && (
               <div className="univ-result-meta">
                 <span>{filtered.length}개 표시 · 전체 {universityCatalog.length}개 대학 데이터</span>
-                <span>{universityApiStatus === "careernet" ? "커리어넷 API 연결됨" : universityApiStatus === "loading" ? "커리어넷 API 불러오는 중" : "내장 전국 데이터 사용 중"}</span>
+                      <span>{universityApiStatus === "careernet" ? `커리어넷 API 연결됨 · 대학 ${apiUniversities.length}개 · 학과 ${apiMajors.length}개 · 검사 ${careerTests.length}개` : universityApiStatus === "loading" ? "커리어넷 API 불러오는 중" : "내장 전국 데이터 사용 중"}</span>
               </div>
             )}
 
@@ -4097,7 +4173,7 @@ export default function App() {
                     <div style={{ fontSize:12, color:"#9AA6B2", marginBottom:6 }}>관심 학과</div>
                     <select value={addedTarget?.dept||""} onChange={e => setDept(sel.id, e.target.value)}>
                       <option value="">학과 선택</option>
-                      {sel.depts.map(d => <option key={d} value={d}>{d}</option>)}
+                      {selectedDepartmentOptions.map(d => <option key={d} value={d}>{d}</option>)}
                     </select>
                   </div>
                 )}
@@ -4186,7 +4262,10 @@ export default function App() {
 
               {departmentStats.length > 0 && (
                 <div className="card">
-                  <div className="secl">학과별 수시 합격 등급표</div>
+                <div className="secl">학과별 수시 합격 등급표</div>
+                <div className="mini-body" style={{ marginBottom:10 }}>
+                  {apiMajors.length ? `커리어넷 학과정보 ${apiMajors.length}개 기준으로 표시합니다.` : "내장 학과 데이터 기준으로 표시합니다."}
+                </div>
                   <div className="dept-stat-list">
                     {departmentStats.map(item => (
                       <button
@@ -4228,8 +4307,8 @@ export default function App() {
               {!tracksForTab(sel.tracks, trackTab).length && <div style={{ textAlign:"center", padding:"24px", fontSize:14, color:"#9AA6B2" }}>{trackTab} 전형 없음</div>}
 
               <div className="card">
-                <div className="secl">📚 개설 학과 ({sel.depts.length}개)</div>
-                <div>{sel.depts.map(d => <span key={d} className="dchip">{d}</span>)}</div>
+                <div className="secl">📚 학과 정보 ({selectedDepartmentOptions.length}개)</div>
+                <div>{selectedDepartmentOptions.slice(0, 120).map(d => <span key={d} className="dchip">{d}</span>)}</div>
               </div>
             </>}
 
