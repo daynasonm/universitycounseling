@@ -181,6 +181,7 @@ export const signUpBackend = async form => {
   const metadata = {
     name: form.name.trim(),
     role,
+    counselor_invite_code: role === "counselor" ? form.counselorCode?.trim() : null,
     grade_level: role === "student" ? form.gradeLevel : null,
     class_name: role === "student" ? form.className?.trim() || "미배정" : null,
     high_school: role === "student" ? form.highSchool?.trim() : null,
@@ -206,6 +207,21 @@ export const saveBackendProfile = async (studentId, profile) => {
   const { error } = await supabase
     .from("student_profiles")
     .upsert(profileToRow(studentId, profile), { onConflict: "student_id" });
+  if (error) throw error;
+};
+
+export const saveBackendUser = async user => {
+  if (!supabase || !user?.id) return;
+  const { error } = await supabase
+    .from("app_users")
+    .update({
+      name: user.name,
+      grade_level: user.gradeLevel || null,
+      class_name: user.className || null,
+      high_school: user.highSchool || null,
+      preferred_major: user.preferredMajor || null,
+    })
+    .eq("id", user.id);
   if (error) throw error;
 };
 

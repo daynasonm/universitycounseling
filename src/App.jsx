@@ -7,11 +7,14 @@ import {
   signUpBackend,
   signOutBackend,
   saveBackendProfile,
+  saveBackendUser,
   upsertBackendRequests,
   upsertBackendJournals,
   deleteBackendJournal,
   runAiAnalysis,
 } from "./services/supabaseBackend";
+
+const COUNSELOR_INVITE_CODE = (import.meta.env?.VITE_COUNSELOR_INVITE_CODE || "topclass-counselor-2026").trim();
 
 const UNIVS = [
   { id:"snu", name:"서울대학교", short:"서울대", region:"서울", type:"국립", tier:1, color:"#1B3A6B",
@@ -1453,6 +1456,15 @@ select:focus{border-color:#0EA5E9;}
 .profile-major-value{font-size:22px;line-height:1.16;font-weight:900;color:#0B1324;letter-spacing:-0.45px;}
 .profile-grid{display:grid;grid-template-columns:1.1fr 0.9fr;gap:12px;align-items:start;}
 .profile-section{background:#fff;border:1px solid #E5EAF1;border-radius:14px;padding:20px 22px;margin-bottom:12px;}
+.counselor-edit-panel .field{margin-bottom:0;}
+.profile-target-search{display:grid;gap:8px;margin:12px 0;}
+.sw.compact{margin-bottom:0;}
+.profile-target-results{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;}
+.profile-target-result{display:flex;align-items:center;gap:8px;border:1px solid #E5EAF1;border-radius:12px;background:rgba(255,255,255,0.82);padding:9px 11px;cursor:pointer;font-family:'Noto Sans KR',sans-serif;text-align:left;color:#202632;}
+.profile-target-result span:nth-child(2){font-size:13px;font-weight:800;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;}
+.profile-target-result small{font-size:11px;color:#9AA6B2;font-weight:700;white-space:nowrap;}
+.profile-target-result:disabled{cursor:default;opacity:0.58;}
+.target-edit-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end;}
 .detail-target{border:1px solid #E5EAF1;border-radius:12px;padding:14px 16px;margin-bottom:10px;}
 .detail-target:last-child{margin-bottom:0;}
 .grade-matrix{width:100%;border-collapse:collapse;}
@@ -1460,6 +1472,8 @@ select:focus{border-color:#0EA5E9;}
 .grade-matrix th:first-child{text-align:left;}
 .grade-matrix td{font-size:13px;color:#202632;border-bottom:1px solid #F7FAFD;padding:8px 6px;text-align:center;}
 .grade-matrix td:first-child{text-align:left;font-weight:600;}
+.grade-mini-input{width:62px;border:1px solid #E1E7EF;border-radius:10px;background:#fff;padding:7px 6px;text-align:center;font-size:12.5px;font-weight:800;color:#202632;font-family:'Noto Sans KR',sans-serif;outline:none;}
+.grade-mini-input:focus{border-color:#0EA5E9;box-shadow:0 0 0 3px rgba(14,165,233,0.08);}
 .record-block{padding:12px 0;border-bottom:1px solid #EEF2F7;}
 .record-block:last-child{border-bottom:none;padding-bottom:0;}
 .record-text-card{display:grid;gap:12px;}
@@ -1469,6 +1483,7 @@ select:focus{border-color:#0EA5E9;}
 .ai-notice.done{border-color:rgba(14,165,233,0.22);background:var(--brand-blue-soft);color:var(--brand-blue);}
 .record-textarea{width:100%;min-height:220px;border:1px solid #E1E7EF;border-radius:16px;background:rgba(248,250,252,0.86);padding:15px 16px;color:#202632;font-size:14px;line-height:1.75;resize:vertical;outline:none;font-family:'Noto Sans KR',sans-serif;box-shadow:inset 0 1px 0 rgba(255,255,255,0.74);}
 .record-textarea:focus{border-color:#0EA5E9;box-shadow:0 0 0 3px rgba(14,165,233,0.10),inset 0 1px 0 rgba(255,255,255,0.74);}
+.profile-record-textarea{min-height:200px;}
 .record-text-hint{font-size:12px;line-height:1.6;color:#9AA6B2;}
 .record-analysis-card{display:grid;grid-template-columns:180px minmax(0,1fr);gap:18px;align-items:start;}
 .record-ai-score{border:1px solid rgba(14,165,233,0.22);border-radius:20px;background:linear-gradient(135deg,rgba(14,165,233,0.13),rgba(255,255,255,0.82));padding:18px;text-align:center;}
@@ -1499,6 +1514,9 @@ select:focus{border-color:#0EA5E9;}
 .essay-analysis-card{display:grid;grid-template-columns:180px minmax(0,1fr);gap:18px;align-items:start;}
 .essay-evidence{display:grid;gap:8px;}
 .essay-evidence-item{border:1px solid rgba(14,165,233,0.14);background:rgba(234,247,255,0.62);border-radius:14px;padding:10px 12px;font-size:12.5px;line-height:1.65;color:#4B5563;}
+.profile-essay-textarea{margin-top:10px;min-height:150px;}
+.essay-edit-feedback{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:8px;}
+.essay-edit-feedback span{border-radius:999px;background:#EEF2F7;color:#6B7684;font-size:11px;font-weight:900;padding:5px 8px;}
 .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
 .textarea-input{min-height:110px;resize:vertical;line-height:1.6;}
 .journal-form{border:1px solid #E5EAF1;background:#F8FAFC;border-radius:16px;padding:14px;margin-bottom:14px;}
@@ -1670,6 +1688,9 @@ select:focus{border-color:#0EA5E9;}
 .assignment-status-line{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:8px;}
 .assignment-status-count{display:inline-flex;align-items:center;border-radius:999px;background:rgba(255,255,255,0.72);border:1px solid var(--brand-border);color:var(--brand-muted);font-size:11.5px;font-weight:900;padding:5px 9px;}
 .assignment-preview-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;}
+.assignment-preview-actions{display:flex;align-items:center;gap:6px;flex-wrap:wrap;justify-content:flex-end;}
+.mini-select{border:1px solid #E1E7EF;border-radius:999px;background:#fff;color:#4B5563;font-size:11.5px;font-weight:900;padding:5px 8px;font-family:'Noto Sans KR',sans-serif;outline:none;}
+.mini-select:focus{border-color:#0EA5E9;box-shadow:0 0 0 3px rgba(14,165,233,0.08);}
 .assignment-delete-btn{border:1px solid #FECACA;border-radius:999px;background:#FEF2F2;color:#DC2626;font-size:11.5px;font-weight:800;padding:5px 9px;cursor:pointer;font-family:'Noto Sans KR',sans-serif;flex-shrink:0;}
 .request-list{display:flex;flex-direction:column;gap:10px;}
 .request-card{background:#fff;border:1px solid #E5EAF1;border-radius:12px;padding:16px;}
@@ -1888,6 +1909,7 @@ select:focus{border-color:#0EA5E9;}
   .strategy-score{width:100%;min-width:0;}
   .strategy-split{grid-template-columns:1fr;}
   .strategy-kpis,.swot-grid,.topic-grid,.subject-plan-grid,.susi-grid,.career-test-grid,.admission-mini-grid{grid-template-columns:1fr;}
+  .profile-target-results{grid-template-columns:1fr;}
   .univ-filter-bar{grid-template-columns:1fr;}
   .univ-result-meta{align-items:flex-start;flex-direction:column;}
   .mobile-nav{display:grid;grid-template-columns:repeat(5,1fr);position:fixed;left:0;right:0;bottom:0;z-index:30;padding:7px 8px calc(7px + env(safe-area-inset-bottom));background:rgba(255,255,255,0.96);border-top:1px solid #E5EAF1;box-shadow:0 -8px 24px rgba(17,24,39,0.08);backdrop-filter:blur(14px);}
@@ -2135,7 +2157,7 @@ export default function App() {
   const [backendReady, setBackendReady] = useState(!supabaseEnabled);
   const [backendError, setBackendError] = useState("");
   const [authMode, setAuthMode] = useState("login");
-  const [authForm, setAuthForm] = useState({ name:"", email:"", password:"", role:"student", gradeLevel:"3학년", className:"3-1", highSchool:"", preferredMajor:"" });
+  const [authForm, setAuthForm] = useState({ name:"", email:"", password:"", role:"student", gradeLevel:"3학년", className:"3-1", highSchool:"", preferredMajor:"", counselorCode:"" });
   const [authError, setAuthError] = useState("");
   const [profileReady, setProfileReady] = useState(false);
   const [counselorTab, setCounselorTab] = useState("students");
@@ -2308,7 +2330,7 @@ export default function App() {
   const startSession = user => {
     setCurrentUserId(user.id);
     if (!supabaseEnabled) writeJson(SESSION_KEY, user.id);
-    setAuthForm({ name:"", email:"", password:"", role:"student", gradeLevel:"3학년", className:"3-1", highSchool:"", preferredMajor:"" });
+    setAuthForm({ name:"", email:"", password:"", role:"student", gradeLevel:"3학년", className:"3-1", highSchool:"", preferredMajor:"", counselorCode:"" });
     setAuthError("");
   };
 
@@ -2327,6 +2349,11 @@ export default function App() {
       return;
     }
 
+    if (authMode === "signup" && password.length < 6) {
+      setAuthError("비밀번호는 최소 6자 이상이어야 합니다.");
+      return;
+    }
+
     if (authMode === "signup" && authForm.role === "student" && !authForm.highSchool.trim()) {
       setAuthError("재학 중인 고등학교를 입력해주세요.");
       return;
@@ -2334,6 +2361,16 @@ export default function App() {
 
     if (authMode === "signup" && authForm.role === "student" && !authForm.preferredMajor.trim()) {
       setAuthError("희망 학과를 입력해주세요.");
+      return;
+    }
+
+    if (authMode === "signup" && authForm.role === "counselor" && !authForm.counselorCode.trim()) {
+      setAuthError("상담사 가입은 초대 코드가 필요합니다.");
+      return;
+    }
+
+    if (authMode === "signup" && authForm.role === "counselor" && authForm.counselorCode.trim() !== COUNSELOR_INVITE_CODE) {
+      setAuthError("상담사 초대 코드가 올바르지 않습니다.");
       return;
     }
 
@@ -2367,7 +2404,10 @@ export default function App() {
         }
         applyBackendState(state);
       } catch (error) {
-        setAuthError(error.message || "회원가입에 실패했습니다.");
+        const message = error.message === "Failed to fetch"
+          ? "Supabase 연결에 실패했습니다. URL/키 설정 또는 네트워크 상태를 확인해주세요."
+          : error.message;
+        setAuthError(message || "회원가입에 실패했습니다.");
       }
       return;
     }
@@ -2631,6 +2671,8 @@ export default function App() {
   const profileStrategy = profileStudent
     ? buildStrategyReport(profileStudent.user, profileStudent.profile, universityCatalog)
     : null;
+  const profileTargetIds = new Set((profileStudent?.profile.targets || []).map(item => item.id));
+  const profileRecordText = profileStudent?.profile.gibpu && !profileStudent.profile.gibpu.error ? profileStudent.profile.gibpu.원문 || "" : "";
   const activeUniversityFilters = regionFilter !== "all" || departmentFilter !== "all" || rankFilter !== "overall";
   const filtered = universityCatalog
     .filter(u => {
@@ -2676,6 +2718,142 @@ export default function App() {
   const selectedDept = sel ? (addedTarget?.dept || sel.depts?.[0] || "") : "";
   const admissionStats = sel ? getLastYearAdmissionStats(sel, selectedDept) : null;
   const departmentStats = sel ? sel.depts.map(dept => getLastYearAdmissionStats(sel, dept)) : [];
+
+  const updateProfileStudentProfile = updater => {
+    if (!profileStudent) return;
+    setProfiles(prev => {
+      const existingProfile = prev[profileStudent.user.id] || profileStudent.profile || createProfile();
+      const nextProfile = typeof updater === "function" ? updater(existingProfile) : { ...existingProfile, ...updater };
+      const next = { ...prev, [profileStudent.user.id]: nextProfile };
+      if (supabaseEnabled) saveBackendProfile(profileStudent.user.id, nextProfile).catch(error => setBackendError(error.message));
+      else writeJson(PROFILES_KEY, next);
+      return next;
+    });
+  };
+
+  const updateProfileStudentUser = patch => {
+    if (!profileStudent) return;
+    setUsers(prev => {
+      const baseUser = prev.find(user => user.id === profileStudent.user.id) || profileStudent.user;
+      const nextUser = { ...baseUser, ...patch };
+      const next = prev.map(user => user.id === profileStudent.user.id ? nextUser : user);
+      if (supabaseEnabled) saveBackendUser(nextUser).catch(error => setBackendError(error.message));
+      else writeJson(USERS_KEY, next);
+      return next;
+    });
+  };
+
+  const addProfileTarget = university => {
+    if (!profileStudent || profileTargetIds.has(university.id)) return;
+    updateProfileStudentProfile(profile => ({
+      ...profile,
+      targets: [...(profile.targets || []), { ...university, dept: university.depts?.[0] || "" }],
+    }));
+    setQuery("");
+  };
+
+  const removeProfileTarget = id => {
+    updateProfileStudentProfile(profile => ({
+      ...profile,
+      targets: (profile.targets || []).filter(item => item.id !== id),
+    }));
+  };
+
+  const setProfileTargetDept = (id, dept) => {
+    updateProfileStudentProfile(profile => ({
+      ...profile,
+      targets: (profile.targets || []).map(item => item.id === id ? { ...item, dept } : item),
+    }));
+  };
+
+  const setProfileGrade = (subject, semester, value) => {
+    const n = parseFloat(value);
+    updateProfileStudentProfile(profile => {
+      const nextGrades = { ...(profile.grades || {}) };
+      const key = `${subject}-${semester}`;
+      if (value === "" || isNaN(n)) delete nextGrades[key];
+      else nextGrades[key] = Math.min(9, Math.max(1, n));
+      return { ...profile, grades: nextGrades };
+    });
+  };
+
+  const updateProfileRecordText = value => {
+    updateProfileStudentProfile(profile => ({
+      ...profile,
+      gibpu: buildRecordFromText(profile.gibpu, value, profileStudent?.user.preferredMajor || ""),
+    }));
+  };
+
+  const updateProfileEssayDraft = (id, value) => {
+    updateProfileStudentProfile(profile => ({
+      ...profile,
+      essays: { ...createEmptyEssays(), ...(profile.essays || {}), [id]: value },
+    }));
+  };
+
+  const toggleProfileChecklist = id => {
+    updateProfileStudentProfile(profile => ({
+      ...profile,
+      checklist: { ...(profile.checklist || {}), [id]: !profile.checklist?.[id] },
+    }));
+  };
+
+  const setProfileAssignmentStatus = (id, status) => {
+    updateProfileStudentProfile(profile => {
+      const existingAssignments = profile.assignments?.length ? profile.assignments : DEFAULT_ASSIGNMENTS;
+      return {
+        ...profile,
+        assignments: existingAssignments.map(item => item.id === id ? { ...item, status } : item),
+      };
+    });
+  };
+
+  const runProfileRecordAgentAnalysis = async () => {
+    if (!profileStudent) return;
+    const recordText = profileRecordText;
+    if (!recordText.trim()) {
+      setAiNotice("생활기록부 원문을 먼저 입력해주세요.");
+      return;
+    }
+    if (!supabaseEnabled) {
+      updateProfileRecordText(recordText);
+      setAiNotice("규칙 기반 분석을 갱신했습니다. Supabase Edge Function 연결 후 진짜 AI 분석을 사용할 수 있습니다.");
+      return;
+    }
+    setAiBusy(true);
+    setAiNotice("");
+    try {
+      const data = await runAiAnalysis({
+        kind: "record",
+        preferredMajor: profileStudent.user.preferredMajor || "",
+        recordText,
+        student: profileStudent.user,
+      });
+      updateProfileStudentProfile(profile => {
+        const source = buildRecordFromText(profile.gibpu, recordText, profileStudent.user.preferredMajor || "");
+        return {
+          ...profile,
+          gibpu: {
+            ...source,
+            AI분석: {
+              score: data.score ?? source.AI분석?.score ?? 0,
+              level: data.level || source.AI분석?.level || "분석 완료",
+              summary: data.summary || source.AI분석?.summary || "",
+              strengths: data.strengths || source.AI분석?.strengths || [],
+              gaps: data.gaps || source.AI분석?.gaps || [],
+              actions: data.actions || source.AI분석?.actions || [],
+              counselorNotes: data.counselorNotes || [],
+            },
+          },
+        };
+      });
+      setAiNotice("AI 분석이 학생 프로필에 저장되었습니다.");
+    } catch (error) {
+      setAiNotice(error.message || "AI 분석에 실패했습니다. 잠시 후 다시 시도해주세요.");
+    } finally {
+      setAiBusy(false);
+    }
+  };
 
   const setJournalValue = (key, value) => {
     setJournalForm(prev => ({ ...prev, [key]: value }));
@@ -2913,6 +3091,19 @@ export default function App() {
                       </div>
                     </>
                   )}
+                  {authForm.role === "counselor" && (
+                    <div className="field">
+                      <label htmlFor="auth-counselor-code">상담사 초대 코드</label>
+                      <input
+                        id="auth-counselor-code"
+                        className="auth-input"
+                        value={authForm.counselorCode}
+                        onChange={e => setAuthValue("counselorCode", e.target.value)}
+                        placeholder="관리자에게 받은 코드"
+                        autoComplete="off"
+                      />
+                    </div>
+                  )}
                 </>
               )}
 
@@ -3067,6 +3258,44 @@ export default function App() {
                       <div className="cstat"><div className="cstat-label">대표 상태</div><div className="cstat-value">{profileStudent.match?.label || "대기"}</div></div>
                 </div>
 
+                <section className="profile-section counselor-edit-panel">
+                  <div className="request-top">
+                    <div>
+                      <div className="secl">학생 정보 수정</div>
+                      <div className="mini-body">상담사가 수정한 정보는 학생 화면에도 바로 반영됩니다.</div>
+                    </div>
+                    <span className="status-pill sent">편집 가능</span>
+                  </div>
+                  <div className="form-grid">
+                    <div className="field">
+                      <label htmlFor="profile-edit-name">이름</label>
+                      <input id="profile-edit-name" className="auth-input" value={profileStudent.user.name || ""} onChange={e => updateProfileStudentUser({ name:e.target.value })} />
+                    </div>
+                    <div className="field">
+                      <label htmlFor="profile-edit-school">고등학교</label>
+                      <input id="profile-edit-school" className="auth-input" value={profileStudent.user.highSchool || ""} onChange={e => updateProfileStudentUser({ highSchool:e.target.value })} />
+                    </div>
+                    <div className="field">
+                      <label htmlFor="profile-edit-major">희망 학과</label>
+                      <input id="profile-edit-major" className="auth-input" value={profileStudent.user.preferredMajor || ""} onChange={e => updateProfileStudentUser({ preferredMajor:e.target.value })} />
+                    </div>
+                    <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10 }}>
+                      <div className="field">
+                        <label htmlFor="profile-edit-grade">학년</label>
+                        <select id="profile-edit-grade" className="auth-input" value={profileStudent.user.gradeLevel || "3학년"} onChange={e => updateProfileStudentUser({ gradeLevel:e.target.value })}>
+                          <option value="1학년">1학년</option>
+                          <option value="2학년">2학년</option>
+                          <option value="3학년">3학년</option>
+                        </select>
+                      </div>
+                      <div className="field">
+                        <label htmlFor="profile-edit-class">반</label>
+                        <input id="profile-edit-class" className="auth-input" value={profileStudent.user.className || ""} onChange={e => updateProfileStudentUser({ className:e.target.value })} />
+                      </div>
+                    </div>
+                  </div>
+                </section>
+
                 <section className="profile-section">
                   <div className="request-top">
                     <div>
@@ -3075,7 +3304,7 @@ export default function App() {
                     </div>
                     <span className="status-pill sent">{profileStrategy?.level || "전략 대기"}</span>
                   </div>
-                  <StrategyReport report={profileStrategy} compact />
+                  <StrategyReport report={profileStrategy} />
                 </section>
 
                 <section className="profile-section">
@@ -3138,7 +3367,17 @@ export default function App() {
                             <span className="assignment-tag">{item.subject}</span>
                             <span className={`assignment-tag status-${statusKey}`}>{statusLabel}</span>
                           </div>
-                          <button className="assignment-delete-btn" type="button" onClick={() => deleteStudentAssignment(item.id)}>삭제</button>
+                          <div className="assignment-preview-actions">
+                            <select
+                              className="mini-select"
+                              value={statusKey}
+                              onChange={e => setProfileAssignmentStatus(item.id, e.target.value)}
+                              aria-label={`${item.title} 상태 변경`}
+                            >
+                              {ASSIGNMENT_COLUMNS.map(column => <option key={column.key} value={column.key}>{column.label}</option>)}
+                            </select>
+                            <button className="assignment-delete-btn" type="button" onClick={() => deleteStudentAssignment(item.id)}>삭제</button>
+                          </div>
                         </div>
                         <div className="assignment-title">{item.title}</div>
                         <div className="assignment-meta">{item.teacher} · 마감 {item.due}</div>
@@ -3201,14 +3440,14 @@ export default function App() {
                                   const isNext = profileRoadmapState.nextItem?.id === item.id && !item.urgent;
                                   const status = done ? "완료" : item.urgent ? "긴급" : isNext ? "다음" : "예정";
                                   return (
-                                    <div key={item.id} className={`timeline-task readonly${done ? " done" : ""}${item.urgent && !done ? " urgent" : ""}${isNext ? " next" : ""}`}>
+                                    <button key={item.id} type="button" className={`timeline-task${done ? " done" : ""}${item.urgent && !done ? " urgent" : ""}${isNext ? " next" : ""}`} onClick={() => toggleProfileChecklist(item.id)}>
                                       <span className="timeline-task-icon">{done ? "✓" : item.urgent ? "!" : itemIndex + 1}</span>
                                       <span>
                                         <span className="timeline-task-title">{item.title}</span>
                                         <span className="timeline-task-body">{item.body}</span>
                                       </span>
                                       <span className="timeline-task-status">{status}</span>
-                                    </div>
+                                    </button>
                                   );
                                 })}
                               </div>
@@ -3314,7 +3553,31 @@ export default function App() {
                 <div className="profile-grid">
                   <div>
                     <section className="profile-section">
-                      <div className="secl">목표 대학 및 전형 적합도</div>
+                      <div className="request-top">
+                        <div>
+                          <div className="secl">목표 대학 및 전형 적합도</div>
+                          <div className="mini-body">대학을 추가하고 관심 학과를 바로 수정할 수 있습니다.</div>
+                        </div>
+                        <span className="status-pill sent">{profileStudent.profile.targets?.length || 0}개</span>
+                      </div>
+                      <div className="profile-target-search">
+                        <div className="sw compact">
+                          <span className="ico">🔍</span>
+                          <input type="search" value={query} onChange={e => setQuery(e.target.value)} placeholder="대학명, 학과명, 지역 검색" />
+                        </div>
+                        {query.trim() && (
+                          <div className="profile-target-results">
+                            {filtered.slice(0, 8).map(u => (
+                              <button key={u.id} type="button" className="profile-target-result" onClick={() => addProfileTarget(u)} disabled={profileTargetIds.has(u.id)}>
+                                <span className="dot" style={{ background:u.color, width:8, height:8 }} />
+                                <span>{u.name}</span>
+                                <small>{profileTargetIds.has(u.id) ? "추가됨" : `${u.region} · ${TIER_LABEL[u.tier]}권`}</small>
+                              </button>
+                            ))}
+                            {!filtered.length && <div className="assignment-empty">검색 결과가 없습니다</div>}
+                          </div>
+                        )}
+                      </div>
                       {(profileStudent.profile.targets || []).map(t => {
                         const match = getMatchForAvg(t, profileStudent.avgValue);
                         return (
@@ -3322,9 +3585,19 @@ export default function App() {
                             <div style={{ display:"flex", justifyContent:"space-between", gap:12, flexWrap:"wrap", marginBottom:8 }}>
                               <div>
                                 <div style={{ fontSize:16, fontWeight:700, color:"#202632" }}>{t.name}</div>
-                                <div style={{ fontSize:12, color:"#6B7684", marginTop:2 }}>{t.dept || "학과 미선택"} · {t.region} · {t.type}</div>
+                                <div style={{ fontSize:12, color:"#6B7684", marginTop:2 }}>{t.region} · {t.type}</div>
                               </div>
-                              {match && <span style={{ fontSize:13, fontWeight:700, color:match.color }}>{match.label}</span>}
+                              <div className="target-edit-actions">
+                                {match && <span style={{ fontSize:13, fontWeight:700, color:match.color }}>{match.label}</span>}
+                                <button className="assignment-delete-btn" type="button" onClick={() => removeProfileTarget(t.id)}>삭제</button>
+                              </div>
+                            </div>
+                            <div className="field" style={{ marginBottom:10 }}>
+                              <label htmlFor={`profile-target-dept-${t.id}`}>관심 학과</label>
+                              <select id={`profile-target-dept-${t.id}`} className="auth-input" value={t.dept || ""} onChange={e => setProfileTargetDept(t.id, e.target.value)}>
+                                <option value="">학과 선택</option>
+                                {(t.depts || []).map(dept => <option key={dept} value={dept}>{dept}</option>)}
+                              </select>
                             </div>
                             <div className="target-stack">
                               {tracksForTab(t.tracks, "수시").concat((t.tracks || []).filter(track => track.type !== "수시")).map(track => <span key={track.name} className={`badge b${track.type}`}>{track.name} · {track.grade ? `${track.grade}등급` : "수능"}</span>)}
@@ -3349,7 +3622,20 @@ export default function App() {
                             {SUBJECTS.map(subject => (
                               <tr key={subject}>
                                 <td>{subject}</td>
-                                {SEMS.map(m => <td key={m}>{profileStudent.profile.grades?.[`${subject}-${m}`] ?? "-"}</td>)}
+                                {SEMS.map(m => (
+                                  <td key={m}>
+                                    <input
+                                      className="grade-mini-input"
+                                      type="number"
+                                      min="1"
+                                      max="9"
+                                      step="0.1"
+                                      value={profileStudent.profile.grades?.[`${subject}-${m}`] ?? ""}
+                                      onChange={e => setProfileGrade(subject, m, e.target.value)}
+                                      aria-label={`${subject} ${m} 등급`}
+                                    />
+                                  </td>
+                                ))}
                               </tr>
                             ))}
                           </tbody>
@@ -3386,7 +3672,12 @@ export default function App() {
                     </section>
 
                     <section className="profile-section">
-                      <div className="secl">자소서</div>
+                      <div className="request-top">
+                        <div>
+                          <div className="secl">자소서</div>
+                          <div className="mini-body">문항별 초안을 상담사가 바로 첨삭하고 분석을 확인합니다.</div>
+                        </div>
+                      </div>
                       <div className="mini-list">
                         {ESSAY_PROMPTS.map(prompt => {
                           const draft = profileStudent.profile.essays?.[prompt.id] || "";
@@ -3395,7 +3686,17 @@ export default function App() {
                             <div key={prompt.id} className="mini-item">
                               <div className="mini-title">{prompt.title}</div>
                               <div className="mini-body">{draft ? `${draft.length}자 · ${analysis.level} · ${analysis.score}점` : "초안 없음"}</div>
-                              {draft && <div className="record-text-preview">{draft}</div>}
+                              <textarea
+                                className="auth-input textarea-input profile-essay-textarea"
+                                value={draft}
+                                onChange={e => updateProfileEssayDraft(prompt.id, e.target.value)}
+                                placeholder={prompt.guide}
+                              />
+                              <div className="essay-edit-feedback">
+                                <span>충분한 점 {analysis.strengths.length}</span>
+                                <span>보완점 {analysis.gaps.length}</span>
+                                <span>다음 액션 {analysis.actions.length}</span>
+                              </div>
                             </div>
                           );
                         })}
@@ -3413,10 +3714,29 @@ export default function App() {
                     </section>
 
                     <section className="profile-section">
-                      <div className="secl">생활기록부</div>
+                      <div className="request-top">
+                        <div>
+                          <div className="secl">생활기록부</div>
+                          <div className="mini-body">업로드 파일명과 원문, AI 분석 결과를 확인하고 원문을 보정합니다.</div>
+                        </div>
+                        <button className="small-primary" type="button" onClick={runProfileRecordAgentAnalysis} disabled={aiBusy}>
+                          {aiBusy ? "AI 분석 중" : "AI 분석 갱신"}
+                        </button>
+                      </div>
+                      {aiNotice && <div className={`ai-notice${aiNotice.includes("저장") || aiNotice.includes("갱신") ? " done" : ""}`}>{aiNotice}</div>}
                       <div className="mini-item" style={{ marginBottom:10 }}>
                         <div className="mini-title">{profileStudent.profile.fname || "업로드 없음"}</div>
                         <div className="mini-body">{profileStudent.profile.gibpu ? "분석 결과 있음" : "분석 결과 없음"}</div>
+                      </div>
+                      <div className="field" style={{ marginBottom:12 }}>
+                        <label htmlFor="profile-record-text">생활기록부 원문</label>
+                        <textarea
+                          id="profile-record-text"
+                          className="auth-input textarea-input profile-record-textarea"
+                          value={profileRecordText}
+                          onChange={e => updateProfileRecordText(e.target.value)}
+                          placeholder="학생이 올린 생활기록부 내용을 옮겨 적거나 OCR 결과를 붙여넣으세요."
+                        />
                       </div>
                       {profileStudent.profile.gibpu && !profileStudent.profile.gibpu.error ? (
                         <>

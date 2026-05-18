@@ -55,6 +55,16 @@ create table if not exists public.counseling_journals (
   created_at timestamptz not null default now()
 );
 
+create table if not exists public.app_settings (
+  key text primary key,
+  value text not null,
+  updated_at timestamptz not null default now()
+);
+
+insert into public.app_settings (key, value)
+values ('counselor_invite_code', 'topclass-counselor-2026')
+on conflict (key) do nothing;
+
 create or replace function public.touch_updated_at()
 returns trigger
 language plpgsql
@@ -82,8 +92,23 @@ security definer
 set search_path = public
 as $$
 declare
-  user_role text := coalesce(new.raw_user_meta_data->>'role', 'student');
+  requested_role text := coalesce(new.raw_user_meta_data->>'role', 'student');
+  invite_code text := nullif(new.raw_user_meta_data->>'counselor_invite_code', '');
+  stored_invite_code text;
+  user_role text := 'student';
 begin
+  select value
+    into stored_invite_code
+    from public.app_settings
+   where key = 'counselor_invite_code';
+
+  if requested_role = 'counselor'
+     and invite_code is not null
+     and stored_invite_code is not null
+     and invite_code = stored_invite_code then
+    user_role := 'counselor';
+  end if;
+
   insert into public.app_users (
     id,
     email,
@@ -98,7 +123,7 @@ begin
     new.id,
     new.email,
     coalesce(nullif(new.raw_user_meta_data->>'name', ''), split_part(new.email, '@', 1)),
-    case when user_role in ('student', 'counselor') then user_role else 'student' end,
+    user_role,
     new.raw_user_meta_data->>'grade_level',
     new.raw_user_meta_data->>'class_name',
     new.raw_user_meta_data->>'high_school',
@@ -146,6 +171,7 @@ alter table public.app_users enable row level security;
 alter table public.student_profiles enable row level security;
 alter table public.consultation_requests enable row level security;
 alter table public.counseling_journals enable row level security;
+alter table public.app_settings enable row level security;
 
 drop policy if exists "app_users_select_own_or_counselor" on public.app_users;
 create policy "app_users_select_own_or_counselor"
@@ -159,8 +185,8 @@ create policy "app_users_update_own"
 on public.app_users
 for update
 to authenticated
-using (id = auth.uid())
-with check (id = auth.uid());
+using (id = auth.uid() or public.is_counselor())
+with check (id = auth.uid() or public.is_counselor());
 
 drop policy if exists "student_profiles_select_own_or_counselor" on public.student_profiles;
 create policy "student_profiles_select_own_or_counselor"
