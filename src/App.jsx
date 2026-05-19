@@ -18,6 +18,9 @@ import {
 } from "./services/supabaseBackend";
 
 const COUNSELOR_INVITE_CODE = (import.meta.env?.VITE_COUNSELOR_INVITE_CODE || "topclass-counselor-2026").trim();
+const LOCAL_HOSTNAMES = new Set(["localhost", "127.0.0.1", "::1", ""]);
+const isLocalRuntime = typeof window === "undefined" ? true : LOCAL_HOSTNAMES.has(window.location.hostname);
+const allowLocalDemoMode = !supabaseEnabled && isLocalRuntime;
 
 const isUnconfirmedEmailError = message => `${message || ""}`.toLowerCase().includes("email not confirmed");
 
@@ -2306,13 +2309,13 @@ function StrategyReport({ report, compact = false }) {
 }
 
 export default function App() {
-  const [users, setUsers] = useState(() => supabaseEnabled ? [] : loadUsers());
-  const [profiles, setProfiles] = useState(() => supabaseEnabled ? {} : loadProfiles());
-  const [requests, setRequests] = useState(() => supabaseEnabled ? [] : loadRequests());
-  const [counselingJournals, setCounselingJournals] = useState(() => supabaseEnabled ? [] : loadCounselingJournals());
-  const [counselorClasses, setCounselorClasses] = useState(() => supabaseEnabled ? [] : loadCounselorClasses());
-  const [classMemberships, setClassMemberships] = useState(() => supabaseEnabled ? [] : loadClassMemberships());
-  const [currentUserId, setCurrentUserId] = useState(() => supabaseEnabled ? null : readJson(SESSION_KEY, null));
+  const [users, setUsers] = useState(() => supabaseEnabled ? [] : allowLocalDemoMode ? loadUsers() : []);
+  const [profiles, setProfiles] = useState(() => supabaseEnabled ? {} : allowLocalDemoMode ? loadProfiles() : {});
+  const [requests, setRequests] = useState(() => supabaseEnabled ? [] : allowLocalDemoMode ? loadRequests() : []);
+  const [counselingJournals, setCounselingJournals] = useState(() => supabaseEnabled ? [] : allowLocalDemoMode ? loadCounselingJournals() : []);
+  const [counselorClasses, setCounselorClasses] = useState(() => supabaseEnabled ? [] : allowLocalDemoMode ? loadCounselorClasses() : []);
+  const [classMemberships, setClassMemberships] = useState(() => supabaseEnabled ? [] : allowLocalDemoMode ? loadClassMemberships() : []);
+  const [currentUserId, setCurrentUserId] = useState(() => supabaseEnabled || !allowLocalDemoMode ? null : readJson(SESSION_KEY, null));
   const [backendReady, setBackendReady] = useState(!supabaseEnabled);
   const [backendError, setBackendError] = useState("");
   const [authMode, setAuthMode] = useState("login");
@@ -2552,8 +2555,13 @@ export default function App() {
       return;
     }
 
-    if (!supabaseEnabled && authMode === "signup" && authForm.role === "counselor" && authForm.counselorCode.trim() !== COUNSELOR_INVITE_CODE) {
+    if (allowLocalDemoMode && authMode === "signup" && authForm.role === "counselor" && authForm.counselorCode.trim() !== COUNSELOR_INVITE_CODE) {
       setAuthError("상담사 초대 코드가 올바르지 않습니다.");
+      return;
+    }
+
+    if (!supabaseEnabled && !allowLocalDemoMode) {
+      setAuthError("공개 배포 링크에 Supabase 설정이 연결되지 않았습니다. GitHub Actions Secrets 설정 후 다시 배포해주세요.");
       return;
     }
 
@@ -3557,6 +3565,11 @@ export default function App() {
               </div>
 
               {authNotice && <div className="auth-notice">{authNotice}</div>}
+              {!supabaseEnabled && !allowLocalDemoMode && (
+                <div className="auth-error">
+                  공개 배포 링크에 Supabase 설정이 없습니다. 관리자에게 배포 설정 확인을 요청해주세요.
+                </div>
+              )}
               {authError && <div className="auth-error">{authError}</div>}
               {showResendConfirmation && supabaseEnabled && (
                 <button type="button" className="ghost-btn auth-resend-btn" onClick={handleResendConfirmation}>
@@ -3566,7 +3579,7 @@ export default function App() {
               <button className="primary-btn" type="submit">{authMode === "login" ? "로그인" : "가입하기"}</button>
 
               {backendError && <div className="auth-error">{backendError}</div>}
-              {!supabaseEnabled && (
+              {allowLocalDemoMode && (
                 <div className="ghost-row">
                   <button type="button" className="ghost-btn" onClick={() => loginWithUser(users.find(u => u.email === "minseo@student.test"))}>학생 체험</button>
                   <button type="button" className="ghost-btn" onClick={() => loginWithUser(users.find(u => u.email === "counselor@test.com"))}>상담사 체험</button>
