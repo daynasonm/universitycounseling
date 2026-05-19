@@ -280,6 +280,17 @@ export const upsertBackendCounselorAccess = async ({ counselorId, name, joinCode
   return loadBackendState();
 };
 
+export const setBackendUserRole = async ({ userId, role, isActive = true }) => {
+  if (!supabase) throw new Error("Supabase 설정이 없습니다.");
+  const { error } = await supabase.rpc("admin_set_user_role", {
+    target_user_id: userId,
+    target_role: role,
+    active: isActive,
+  });
+  if (error) throw error;
+  return loadBackendState();
+};
+
 export const joinBackendClass = async joinCode => {
   if (!supabase) throw new Error("Supabase 설정이 없습니다.");
   const { error } = await supabase.rpc("join_class_by_code", {

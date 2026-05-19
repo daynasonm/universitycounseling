@@ -10,6 +10,7 @@ import {
   saveBackendProfile,
   saveBackendUser,
   upsertBackendCounselorAccess,
+  setBackendUserRole,
   joinBackendClass,
   upsertBackendRequests,
   upsertBackendJournals,
@@ -1588,6 +1589,11 @@ select:focus{border-color:#0EA5E9;}
 .admin-student-chip{border:1px solid #E5EAF1;border-radius:999px;background:#F8FAFC;color:#4B5563;font-size:12px;font-weight:700;padding:7px 10px;font-family:'Noto Sans KR',sans-serif;}
 .admin-student-table{display:grid;gap:8px;}
 .admin-student-row{display:grid;grid-template-columns:1.2fr 0.9fr 1fr 1fr 0.7fr;gap:10px;align-items:center;border:1px solid #EEF2F7;border-radius:12px;background:#F8FAFC;padding:12px;font-size:12.5px;color:#4B5563;}
+.admin-user-row{grid-template-columns:1.3fr 0.7fr 1fr 1.1fr;}
+.admin-role-actions{display:flex;gap:7px;flex-wrap:wrap;justify-content:flex-end;}
+.role-pill{display:inline-flex;align-items:center;justify-content:center;border-radius:999px;padding:5px 10px;font-size:11px;font-weight:900;background:#EEF2F7;color:#4B5563;}
+.role-pill.student{background:#EAF7FF;color:#0EA5E9;}
+.role-pill.counselor{background:#FFF7ED;color:#C2410C;}
 .student-card-row{display:grid;grid-template-columns:1.2fr 0.9fr 0.8fr 1.3fr 0.7fr;gap:12px;align-items:center;width:100%;border:0;border-bottom:1px solid #EEF2F7;background:#fff;padding:13px 16px;text-align:left;cursor:pointer;font-family:'Noto Sans KR',sans-serif;}
 .student-card-row:last-child{border-bottom:none;}
 .student-card-row:hover{background:#F7FAFD;}
@@ -2821,6 +2827,59 @@ export default function App() {
     setAdminNotice(`${counselor.name} 상담사 설정을 저장했습니다.`);
   };
 
+  const changeUserRole = async (targetUser, nextRole) => {
+    if (!currentUser || currentUser.role !== "admin" || !targetUser || targetUser.role === nextRole) return;
+    if (!["student", "counselor"].includes(nextRole)) return;
+
+    if (supabaseEnabled) {
+      try {
+        const state = await setBackendUserRole({ userId:targetUser.id, role:nextRole, isActive:true });
+        applyBackendState(state);
+        setAdminNotice(`${targetUser.name} 계정을 ${nextRole === "counselor" ? "상담사" : "학생"}로 변경했습니다.`);
+      } catch (error) {
+        setAdminNotice(error.message || "역할 변경에 실패했습니다.");
+      }
+      return;
+    }
+
+    setUsers(prev => {
+      const next = prev.map(user => user.id === targetUser.id ? { ...user, role:nextRole, isActive:true } : user);
+      writeJson(USERS_KEY, next);
+      return next;
+    });
+    if (nextRole === "student") {
+      setProfiles(prev => {
+        const next = { ...prev, [targetUser.id]: prev[targetUser.id] || createProfile() };
+        writeJson(PROFILES_KEY, next);
+        return next;
+      });
+      setCounselorClasses(prev => {
+        const removedClassIds = new Set(prev.filter(item => item.counselorId === targetUser.id).map(item => item.id));
+        const next = prev.filter(item => item.counselorId !== targetUser.id);
+        writeJson(CLASSES_KEY, next);
+        setClassMemberships(memberships => {
+          const nextMemberships = memberships.filter(item => !removedClassIds.has(item.classId));
+          writeJson(MEMBERSHIPS_KEY, nextMemberships);
+          return nextMemberships;
+        });
+        return next;
+      });
+    } else {
+      setProfiles(prev => {
+        const next = { ...prev };
+        delete next[targetUser.id];
+        writeJson(PROFILES_KEY, next);
+        return next;
+      });
+      setClassMemberships(prev => {
+        const next = prev.filter(item => item.studentId !== targetUser.id);
+        writeJson(MEMBERSHIPS_KEY, next);
+        return next;
+      });
+    }
+    setAdminNotice(`${targetUser.name} 계정을 ${nextRole === "counselor" ? "상담사" : "학생"}로 변경했습니다.`);
+  };
+
   const joinClassWithCode = async e => {
     e.preventDefault();
     if (!currentUser || currentUser.role !== "student") return;
@@ -3041,6 +3100,8 @@ export default function App() {
     : !requestForm.category
       ? "상담 주제를 선택하세요"
       : "상담 신청하기";
+  const roleLabels = { student:"학생", counselor:"상담사", admin:"총관리자" };
+  const manageableUsers = users.filter(user => user.role !== "admin");
   const counselorUsers = users.filter(user => user.role === "counselor");
   const getCounselorAccess = counselorId => counselorClasses.find(item => item.counselorId === counselorId) || null;
   const getCounselorStudentCount = counselorId => {
@@ -3633,6 +3694,33 @@ export default function App() {
 	              <div className="sw" style={{ marginBottom:0 }}>
 	                <span className="ico">🔍</span>
 	                <input type="search" value={adminQuery} onChange={e => setAdminQuery(e.target.value)} placeholder="상담사명, 이메일, 학생용 코드 검색" />
+	              </div>
+	            </section>
+
+	            <section className="profile-section">
+	              <div className="request-top">
+	                <div>
+	                  <div className="secl">가입자 역할 관리</div>
+	                  <div className="mini-body">Supabase Auth 목록은 모두 일반 user로 보입니다. 실제 학생/상담사 구분은 여기서 관리합니다.</div>
+	                </div>
+	                <span className="status-pill sent">{manageableUsers.length}명</span>
+	              </div>
+	              <div className="admin-student-table">
+	                {manageableUsers.map(user => (
+	                  <div key={user.id} className="admin-student-row admin-user-row">
+	                    <div>
+	                      <div className="student-name">{user.name}</div>
+	                      <div className="student-email">{user.email}</div>
+	                    </div>
+	                    <div><span className={`role-pill ${user.role}`}>{roleLabels[user.role] || user.role}</span></div>
+	                    <div>{user.role === "student" ? user.highSchool || "학교 미입력" : getCounselorAccess(user.id)?.joinCode || "코드 미발급"}</div>
+	                    <div className="admin-role-actions">
+	                      <button className="ghost-btn" type="button" disabled={user.role === "student"} onClick={() => changeUserRole(user, "student")}>학생으로</button>
+	                      <button className="small-primary" type="button" disabled={user.role === "counselor"} onClick={() => changeUserRole(user, "counselor")}>상담사로</button>
+	                    </div>
+	                  </div>
+	                ))}
+	                {!manageableUsers.length && <div className="empty" style={{ padding:"36px 20px" }}>가입자가 없습니다</div>}
 	              </div>
 	            </section>
 
