@@ -21,10 +21,28 @@ const mapAppUser = row => ({
   email: row.email || "",
   password: "",
   role: row.role || "student",
+  isActive: row.is_active !== false,
   gradeLevel: row.grade_level || undefined,
   className: row.class_name || undefined,
   highSchool: row.high_school || undefined,
   preferredMajor: row.preferred_major || undefined,
+});
+
+const mapCounselorClass = row => ({
+  id: row.id,
+  counselorId: row.counselor_id,
+  name: row.name || "입시반",
+  joinCode: row.join_code || "",
+  maxStudents: row.max_students || 100,
+  isActive: row.is_active !== false,
+  createdAt: row.created_at,
+  updatedAt: row.updated_at,
+});
+
+const mapClassMembership = row => ({
+  studentId: row.student_id,
+  classId: row.class_id,
+  joinedAt: row.joined_at,
 });
 
 const mapProfile = row => ({
@@ -123,7 +141,7 @@ export const loadBackendState = async () => {
   if (sessionError) throw sessionError;
   const session = sessionData.session;
   if (!session) {
-    return { currentUser: null, users: [], profiles: {}, requests: [], journals: [] };
+    return { currentUser: null, users: [], profiles: {}, requests: [], journals: [], classes: [], memberships: [] };
   }
 
   const { data: userRows, error: usersError } = await supabase
@@ -158,12 +176,26 @@ export const loadBackendState = async () => {
     .order("created_at", { ascending: false });
   if (journalsError) throw journalsError;
 
+  const { data: classRows, error: classesError } = await supabase
+    .from("counselor_classes")
+    .select("*")
+    .order("created_at", { ascending: true });
+  if (classesError) throw classesError;
+
+  const { data: membershipRows, error: membershipsError } = await supabase
+    .from("class_memberships")
+    .select("*")
+    .order("joined_at", { ascending: true });
+  if (membershipsError) throw membershipsError;
+
   return {
     currentUser,
     users,
     profiles,
     requests: (requestRows || []).map(mapRequest),
     journals: (journalRows || []).map(mapJournal),
+    classes: (classRows || []).map(mapCounselorClass),
+    memberships: (membershipRows || []).map(mapClassMembership),
   };
 };
 
@@ -186,6 +218,7 @@ export const signUpBackend = async form => {
     class_name: role === "student" ? form.className?.trim() || "미배정" : null,
     high_school: role === "student" ? form.highSchool?.trim() : null,
     preferred_major: role === "student" ? form.preferredMajor?.trim() : null,
+    class_invite_code: role === "student" ? form.classJoinCode?.trim() || null : null,
   };
   const { data, error } = await supabase.auth.signUp({
     email,
@@ -195,6 +228,15 @@ export const signUpBackend = async form => {
   if (error) throw error;
   if (!data.session) return { needsEmailConfirmation: true };
   return loadBackendState();
+};
+
+export const resendConfirmationBackend = async email => {
+  if (!supabase) throw new Error("Supabase 설정이 없습니다.");
+  const { error } = await supabase.auth.resend({
+    type: "signup",
+    email: email.trim().toLowerCase(),
+  });
+  if (error) throw error;
 };
 
 export const signOutBackend = async () => {
@@ -223,6 +265,28 @@ export const saveBackendUser = async user => {
     })
     .eq("id", user.id);
   if (error) throw error;
+};
+
+export const upsertBackendCounselorAccess = async ({ counselorId, name, joinCode, maxStudents, isActive }) => {
+  if (!supabase) throw new Error("Supabase 설정이 없습니다.");
+  const { error } = await supabase.rpc("admin_upsert_counselor_access", {
+    target_counselor_id: counselorId,
+    class_name: name,
+    requested_code: joinCode || null,
+    student_limit: maxStudents,
+    active: isActive,
+  });
+  if (error) throw error;
+  return loadBackendState();
+};
+
+export const joinBackendClass = async joinCode => {
+  if (!supabase) throw new Error("Supabase 설정이 없습니다.");
+  const { error } = await supabase.rpc("join_class_by_code", {
+    invite_code: joinCode,
+  });
+  if (error) throw error;
+  return loadBackendState();
 };
 
 export const upsertBackendRequests = async requests => {

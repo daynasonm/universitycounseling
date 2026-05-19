@@ -5,9 +5,12 @@ import {
   loadBackendState,
   signInBackend,
   signUpBackend,
+  resendConfirmationBackend,
   signOutBackend,
   saveBackendProfile,
   saveBackendUser,
+  upsertBackendCounselorAccess,
+  joinBackendClass,
   upsertBackendRequests,
   upsertBackendJournals,
   deleteBackendJournal,
@@ -15,6 +18,19 @@ import {
 } from "./services/supabaseBackend";
 
 const COUNSELOR_INVITE_CODE = (import.meta.env?.VITE_COUNSELOR_INVITE_CODE || "topclass-counselor-2026").trim();
+
+const isUnconfirmedEmailError = message => `${message || ""}`.toLowerCase().includes("email not confirmed");
+
+const getAuthErrorMessage = error => {
+  const message = error?.message || `${error || ""}`;
+  if (isUnconfirmedEmailError(message)) return "이메일 인증이 아직 완료되지 않았습니다. 메일함에서 인증 링크를 먼저 눌러주세요.";
+  if (message.toLowerCase().includes("invalid login credentials")) return "이메일 또는 비밀번호가 올바르지 않습니다.";
+  if (message === "Failed to fetch") return "Supabase 연결에 실패했습니다. URL/키 설정 또는 네트워크 상태를 확인해주세요.";
+  if (message.includes("counselor_classes") || message.includes("class_memberships")) {
+    return "관리자/상담사 테이블이 아직 Supabase에 만들어지지 않았습니다. 관리자 역할 SQL 패치를 먼저 실행해주세요.";
+  }
+  return message;
+};
 
 const UNIVS = [
   { id:"snu", name:"서울대학교", short:"서울대", region:"서울", type:"국립", tier:1, color:"#1B3A6B",
@@ -315,6 +331,8 @@ const USERS_KEY = "uc_users_v1";
 const PROFILES_KEY = "uc_profiles_v1";
 const REQUESTS_KEY = "uc_consultation_requests_v1";
 const JOURNALS_KEY = "uc_counseling_journals_v1";
+const CLASSES_KEY = "uc_counselor_classes_v1";
+const MEMBERSHIPS_KEY = "uc_class_memberships_v1";
 const SESSION_KEY = "uc_session_v1";
 const RECORD_FILE_ACCEPT = ".pdf,image/*,.png,.jpg,.jpeg,.heic,.heif,.webp,.gif,.bmp,.tif,.tiff";
 
@@ -985,6 +1003,9 @@ const oneLineSummary = (text = "") => {
   return clean.length > 74 ? `${clean.slice(0, 74)}...` : clean;
 };
 
+const normalizeInviteCode = code => String(code || "").trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
+const createJoinCode = () => `TOP${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
+
 const DEMO_USERS = [
   { id:"student-minseo", name:"김민서", email:"minseo@student.test", password:"student123", role:"student", gradeLevel:"3학년", className:"3-1", highSchool:"서울고등학교", preferredMajor:"컴퓨터공학부" },
   { id:"student-jiho", name:"이지호", email:"jiho@student.test", password:"student123", role:"student", gradeLevel:"3학년", className:"3-1", highSchool:"서울고등학교", preferredMajor:"컴퓨터소프트웨어학부" },
@@ -993,6 +1014,20 @@ const DEMO_USERS = [
   { id:"student-yuna", name:"정유나", email:"yuna@student.test", password:"student123", role:"student", gradeLevel:"1학년", className:"1-2", highSchool:"대치고등학교", preferredMajor:"전산학부" },
   { id:"student-harin", name:"오하린", email:"harin@student.test", password:"student123", role:"student", gradeLevel:"1학년", className:"1-2", highSchool:"대치고등학교", preferredMajor:"의예과" },
   { id:"counselor-demo", name:"박상담", email:"counselor@test.com", password:"counselor123", role:"counselor" },
+  { id:"admin-demo", name:"총관리자", email:"admin@test.com", password:"admin123", role:"admin" },
+];
+
+const DEMO_CLASSES = [
+  { id:"class-demo-park", counselorId:"counselor-demo", name:"박상담 학생 코드", joinCode:"PARK2026", maxStudents:100, isActive:true, createdAt:"2026-05-01T00:00:00.000Z" },
+];
+
+const DEMO_MEMBERSHIPS = [
+  { studentId:"student-minseo", classId:"class-demo-park", joinedAt:"2026-05-01T00:10:00.000Z" },
+  { studentId:"student-jiho", classId:"class-demo-park", joinedAt:"2026-05-01T00:12:00.000Z" },
+  { studentId:"student-seoyeon", classId:"class-demo-park", joinedAt:"2026-05-01T00:14:00.000Z" },
+  { studentId:"student-doyun", classId:"class-demo-park", joinedAt:"2026-05-01T00:16:00.000Z" },
+  { studentId:"student-yuna", classId:"class-demo-park", joinedAt:"2026-05-01T00:18:00.000Z" },
+  { studentId:"student-harin", classId:"class-demo-park", joinedAt:"2026-05-01T00:20:00.000Z" },
 ];
 
 const DEMO_PROFILES = {
@@ -1182,6 +1217,32 @@ const loadCounselingJournals = () => {
   }
   writeJson(JOURNALS_KEY, DEMO_JOURNALS);
   return DEMO_JOURNALS;
+};
+
+const loadCounselorClasses = () => {
+  const stored = readJson(CLASSES_KEY, null);
+  if (Array.isArray(stored)) {
+    const byId = new Map(DEMO_CLASSES.map(item => [item.id, item]));
+    stored.forEach(item => byId.set(item.id, item));
+    const merged = Array.from(byId.values());
+    writeJson(CLASSES_KEY, merged);
+    return merged;
+  }
+  writeJson(CLASSES_KEY, DEMO_CLASSES);
+  return DEMO_CLASSES;
+};
+
+const loadClassMemberships = () => {
+  const stored = readJson(MEMBERSHIPS_KEY, null);
+  if (Array.isArray(stored)) {
+    const byStudentId = new Map(DEMO_MEMBERSHIPS.map(item => [item.studentId, item]));
+    stored.forEach(item => byStudentId.set(item.studentId, item));
+    const merged = Array.from(byStudentId.values());
+    writeJson(MEMBERSHIPS_KEY, merged);
+    return merged;
+  }
+  writeJson(MEMBERSHIPS_KEY, DEMO_MEMBERSHIPS);
+  return DEMO_MEMBERSHIPS;
 };
 
 const createId = role => `${role}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -1471,10 +1532,12 @@ select:focus{border-color:#0EA5E9;}
 .primary-btn{width:100%;padding:11px 14px;border:none;border-radius:9px;background:#0EA5E9;color:#fff;font-size:14px;font-weight:600;cursor:pointer;font-family:'Noto Sans KR',sans-serif;}
 .primary-btn:hover{background:#1E40AF;}
 .link-btn{border:none;background:transparent;color:#0EA5E9;font-size:13px;font-weight:600;cursor:pointer;font-family:'Noto Sans KR',sans-serif;}
-.ghost-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px;}
+.ghost-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;margin-top:12px;}
 .ghost-btn{padding:9px 10px;border:1px solid #E1E7EF;border-radius:9px;background:#fff;color:#374151;font-size:12.5px;cursor:pointer;font-family:'Noto Sans KR',sans-serif;}
 .ghost-btn:hover{background:#F7FAFD;}
 .auth-error{padding:10px 12px;border-radius:9px;background:#FEF2F2;border:1px solid #FECACA;color:#B91C1C;font-size:13px;margin-bottom:12px;}
+.auth-notice{padding:10px 12px;border-radius:9px;background:#EAF2FF;border:1px solid rgba(14,165,233,0.22);color:#0EA5E9;font-size:13px;font-weight:700;margin-bottom:12px;}
+.auth-resend-btn{width:100%;margin:-2px 0 12px;}
 .sidebar-spacer{flex:1;}
 .userbox{margin:12px;padding:12px;border-radius:12px;background:#F2F5F9;border:1px solid #E5EAF1;}
 .user-name{font-size:13px;font-weight:600;color:#202632;margin-bottom:2px;}
@@ -1504,6 +1567,24 @@ select:focus{border-color:#0EA5E9;}
 .class-head{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:13px 16px;background:#FAFAFA;border-bottom:1px solid #EEF2F7;}
 .class-title{font-size:14px;font-weight:700;color:#202632;}
 .class-meta{font-size:12px;color:#9AA6B2;}
+.class-admin-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px;}
+.class-admin-card{background:#fff;border:1px solid #E5EAF1;border-radius:18px;padding:16px;box-shadow:0 16px 40px rgba(11,19,36,0.08),inset 0 1px 0 rgba(255,255,255,0.72);}
+.class-admin-top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:14px;}
+.class-code-box{border:1px dashed rgba(14,165,233,0.32);border-radius:14px;background:rgba(234,247,255,0.72);color:#0EA5E9;font-size:22px;font-weight:900;letter-spacing:0;padding:14px;text-align:center;}
+.join-card{width:min(420px,100%);}
+.admin-counselor-list{display:grid;gap:12px;margin-bottom:16px;}
+.admin-counselor-card{background:#fff;border:1px solid #E5EAF1;border-radius:18px;padding:16px;box-shadow:0 16px 40px rgba(11,19,36,0.08),inset 0 1px 0 rgba(255,255,255,0.72);}
+.admin-counselor-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:12px;}
+.admin-form-grid{display:grid;grid-template-columns:1fr 1fr 150px 110px;gap:10px;align-items:end;}
+.admin-form-grid input[type=number].auth-input{width:100%;text-align:left;}
+.admin-toggle{height:41px;border:1px solid #E1E7EF;border-radius:9px;background:#fff;color:#374151;font-size:13px;font-weight:800;display:flex;align-items:center;justify-content:center;gap:7px;cursor:pointer;}
+.admin-toggle input{accent-color:#0EA5E9;}
+.admin-capacity{display:flex;align-items:center;gap:10px;margin-top:10px;color:#202632;font-size:13px;}
+.admin-capacity strong{min-width:70px;text-align:right;}
+.admin-student-list{display:flex;flex-wrap:wrap;gap:7px;margin-top:12px;}
+.admin-student-chip{border:1px solid #E5EAF1;border-radius:999px;background:#F8FAFC;color:#4B5563;font-size:12px;font-weight:700;padding:7px 10px;font-family:'Noto Sans KR',sans-serif;}
+.admin-student-table{display:grid;gap:8px;}
+.admin-student-row{display:grid;grid-template-columns:1.2fr 0.9fr 1fr 1fr 0.7fr;gap:10px;align-items:center;border:1px solid #EEF2F7;border-radius:12px;background:#F8FAFC;padding:12px;font-size:12.5px;color:#4B5563;}
 .student-card-row{display:grid;grid-template-columns:1.2fr 0.9fr 0.8fr 1.3fr 0.7fr;gap:12px;align-items:center;width:100%;border:0;border-bottom:1px solid #EEF2F7;background:#fff;padding:13px 16px;text-align:left;cursor:pointer;font-family:'Noto Sans KR',sans-serif;}
 .student-card-row:last-child{border-bottom:none;}
 .student-card-row:hover{background:#F7FAFD;}
@@ -1858,7 +1939,7 @@ select:focus{border-color:#0EA5E9;}
 .mobile-nav-btn.active{color:#0EA5E9;font-weight:700;}
 .spinner{width:32px;height:32px;border:3px solid #E1E7EF;border-top:3px solid #0EA5E9;border-radius:50%;animation:spin 0.8s linear infinite;margin:0 auto 16px;}
 @keyframes spin{to{transform:rotate(360deg);}}
-.card,.gsec,.profile-section,.profile-head,.cstat,.class-group,.request-card,.booking-card,.home-hero,.quick-card,.progress-card,.check-month,.auth-card,.rcard,.student-table,.detail-panel,.ovc,.avbox{border-color:rgba(255,255,255,0.74);background:rgba(255,255,255,0.72);backdrop-filter:blur(20px) saturate(155%);box-shadow:0 16px 40px rgba(11,19,36,0.08),inset 0 1px 0 rgba(255,255,255,0.72);}
+.card,.gsec,.profile-section,.profile-head,.cstat,.class-group,.class-admin-card,.admin-counselor-card,.request-card,.booking-card,.home-hero,.quick-card,.progress-card,.check-month,.auth-card,.rcard,.student-table,.detail-panel,.ovc,.avbox{border-color:rgba(255,255,255,0.74);background:rgba(255,255,255,0.72);backdrop-filter:blur(20px) saturate(155%);box-shadow:0 16px 40px rgba(11,19,36,0.08),inset 0 1px 0 rgba(255,255,255,0.72);}
 .card,.gsec,.profile-section,.profile-head,.auth-card{border-radius:20px;}
 .ptitle,.booking-title,.home-title,.profile-name,.auth-title,.quick-title,.check-title,.class-title,.student-name,.request-title,.sval,.cstat-value{color:var(--brand-gray);}
 .psub,.booking-sub,.home-sub,.quick-body,.request-body,.ibody,.mini-body{color:var(--brand-muted);}
@@ -1914,6 +1995,8 @@ select:focus{border-color:#0EA5E9;}
   .filter-grid{grid-template-columns:1fr 1fr;}
   .filter-grid .sw{grid-column:1/-1;}
   .student-card-row{grid-template-columns:1fr;gap:8px;}
+  .admin-form-grid{grid-template-columns:1fr 1fr;}
+  .admin-student-row{grid-template-columns:1fr 1fr;}
   .cell-label{display:block;}
   .profile-head{flex-direction:column;}
   .profile-major-spotlight{display:flex;width:100%;justify-content:space-between;}
@@ -1967,6 +2050,8 @@ select:focus{border-color:#0EA5E9;}
   .assignment-stat{border-radius:18px;padding:12px;}
   .assignment-stat-value{font-size:20px;}
   .assignment-board{grid-template-columns:1fr;gap:12px;}
+  .admin-form-grid,.admin-student-row{grid-template-columns:1fr;}
+  .admin-capacity{align-items:flex-start;flex-direction:column;}
   .assignment-column{min-height:auto;border-radius:20px;}
   .record-analysis-card{grid-template-columns:1fr;}
   .record-analysis-grid{grid-template-columns:1fr;}
@@ -1980,8 +2065,9 @@ select:focus{border-color:#0EA5E9;}
   .profile-target-results{grid-template-columns:1fr;}
   .univ-filter-bar{grid-template-columns:1fr;}
   .univ-result-meta{align-items:flex-start;flex-direction:column;}
-  .mobile-nav{display:grid;grid-template-columns:repeat(5,1fr);position:fixed;left:0;right:0;bottom:0;z-index:30;padding:7px 8px calc(7px + env(safe-area-inset-bottom));background:rgba(255,255,255,0.96);border-top:1px solid #E5EAF1;box-shadow:0 -8px 24px rgba(17,24,39,0.08);backdrop-filter:blur(14px);}
-  .mobile-nav.two{grid-template-columns:repeat(2,1fr);}
+	  .mobile-nav{display:grid;grid-template-columns:repeat(5,1fr);position:fixed;left:0;right:0;bottom:0;z-index:30;padding:7px 8px calc(7px + env(safe-area-inset-bottom));background:rgba(255,255,255,0.96);border-top:1px solid #E5EAF1;box-shadow:0 -8px 24px rgba(17,24,39,0.08);backdrop-filter:blur(14px);}
+	  .mobile-nav.two{grid-template-columns:repeat(2,1fr);}
+	  .mobile-nav.three{grid-template-columns:repeat(3,1fr);}
   .auth-root{align-items:flex-start;padding:20px 16px;}
   .auth-card{padding:20px;}
 }
@@ -2224,14 +2310,23 @@ export default function App() {
   const [profiles, setProfiles] = useState(() => supabaseEnabled ? {} : loadProfiles());
   const [requests, setRequests] = useState(() => supabaseEnabled ? [] : loadRequests());
   const [counselingJournals, setCounselingJournals] = useState(() => supabaseEnabled ? [] : loadCounselingJournals());
+  const [counselorClasses, setCounselorClasses] = useState(() => supabaseEnabled ? [] : loadCounselorClasses());
+  const [classMemberships, setClassMemberships] = useState(() => supabaseEnabled ? [] : loadClassMemberships());
   const [currentUserId, setCurrentUserId] = useState(() => supabaseEnabled ? null : readJson(SESSION_KEY, null));
   const [backendReady, setBackendReady] = useState(!supabaseEnabled);
   const [backendError, setBackendError] = useState("");
   const [authMode, setAuthMode] = useState("login");
-  const [authForm, setAuthForm] = useState({ name:"", email:"", password:"", role:"student", gradeLevel:"3학년", className:"3-1", highSchool:"", preferredMajor:"", counselorCode:"" });
+  const [authForm, setAuthForm] = useState({ name:"", email:"", password:"", role:"student", gradeLevel:"3학년", className:"3-1", highSchool:"", preferredMajor:"", counselorCode:"", classJoinCode:"" });
   const [authError, setAuthError] = useState("");
+  const [authNotice, setAuthNotice] = useState("");
+  const [showResendConfirmation, setShowResendConfirmation] = useState(false);
   const [profileReady, setProfileReady] = useState(false);
   const [counselorTab, setCounselorTab] = useState("students");
+  const [adminQuery, setAdminQuery] = useState("");
+  const [adminNotice, setAdminNotice] = useState("");
+  const [adminDrafts, setAdminDrafts] = useState({});
+  const [joinCode, setJoinCode] = useState("");
+  const [joinNotice, setJoinNotice] = useState("");
   const [studentQuery, setStudentQuery] = useState("");
   const [selectedStudentId, setSelectedStudentId] = useState(null);
   const [gradeFilter, setGradeFilter] = useState("all");
@@ -2278,12 +2373,20 @@ export default function App() {
   const fileRef = useRef(null);
   const currentUser = users.find(u => u.id === currentUserId) || null;
   const currentRole = currentUser?.role;
+  const currentStudentMembership = currentRole === "student"
+    ? classMemberships.find(item => item.studentId === currentUserId) || null
+    : null;
+  const currentStudentClass = currentStudentMembership
+    ? counselorClasses.find(item => item.id === currentStudentMembership.classId) || null
+    : null;
 
   const applyBackendState = state => {
     setUsers(state.users || []);
     setProfiles(state.profiles || {});
     setRequests(state.requests || []);
     setCounselingJournals(state.journals || []);
+    setCounselorClasses(state.classes || []);
+    setClassMemberships(state.memberships || []);
     setCurrentUserId(state.currentUser?.id || null);
     setBackendError("");
     localStorage.removeItem(SESSION_KEY);
@@ -2400,13 +2503,17 @@ export default function App() {
   const setAuthValue = (key, value) => {
     setAuthForm(prev => ({ ...prev, [key]: value }));
     setAuthError("");
+    setAuthNotice("");
+    setShowResendConfirmation(false);
   };
 
   const startSession = user => {
     setCurrentUserId(user.id);
     if (!supabaseEnabled) writeJson(SESSION_KEY, user.id);
-    setAuthForm({ name:"", email:"", password:"", role:"student", gradeLevel:"3학년", className:"3-1", highSchool:"", preferredMajor:"", counselorCode:"" });
+    setAuthForm({ name:"", email:"", password:"", role:"student", gradeLevel:"3학년", className:"3-1", highSchool:"", preferredMajor:"", counselorCode:"", classJoinCode:"" });
     setAuthError("");
+    setAuthNotice("");
+    setShowResendConfirmation(false);
   };
 
   const loginWithUser = user => {
@@ -2418,6 +2525,7 @@ export default function App() {
     e.preventDefault();
     const email = normalizeEmail(authForm.email);
     const password = authForm.password.trim();
+    setShowResendConfirmation(false);
 
     if (!email || !password || (authMode === "signup" && !authForm.name.trim())) {
       setAuthError("필수 항목을 입력해주세요.");
@@ -2444,7 +2552,7 @@ export default function App() {
       return;
     }
 
-    if (authMode === "signup" && authForm.role === "counselor" && authForm.counselorCode.trim() !== COUNSELOR_INVITE_CODE) {
+    if (!supabaseEnabled && authMode === "signup" && authForm.role === "counselor" && authForm.counselorCode.trim() !== COUNSELOR_INVITE_CODE) {
       setAuthError("상담사 초대 코드가 올바르지 않습니다.");
       return;
     }
@@ -2453,10 +2561,12 @@ export default function App() {
       if (supabaseEnabled) {
         try {
           setAuthError("");
+          setAuthNotice("");
           const state = await signInBackend(email, password);
           applyBackendState(state);
         } catch (error) {
-          setAuthError(error.message || "로그인에 실패했습니다.");
+          setShowResendConfirmation(isUnconfirmedEmailError(error.message));
+          setAuthError(getAuthErrorMessage(error) || "로그인에 실패했습니다.");
         }
         return;
       }
@@ -2472,17 +2582,17 @@ export default function App() {
     if (supabaseEnabled) {
       try {
         setAuthError("");
+        setAuthNotice("");
         const state = await signUpBackend({ ...authForm, email, password });
         if (state?.needsEmailConfirmation) {
-          setAuthError("확인 이메일을 보냈습니다. 메일 인증 후 로그인해주세요. 테스트 중이면 Supabase Auth에서 email confirmation을 꺼도 됩니다.");
+          setAuthMode("login");
+          setShowResendConfirmation(true);
+          setAuthNotice("확인 이메일을 보냈습니다. 메일 인증 후 방금 만든 계정으로 로그인해주세요.");
           return;
         }
         applyBackendState(state);
       } catch (error) {
-        const message = error.message === "Failed to fetch"
-          ? "Supabase 연결에 실패했습니다. URL/키 설정 또는 네트워크 상태를 확인해주세요."
-          : error.message;
-        setAuthError(message || "회원가입에 실패했습니다.");
+        setAuthError(getAuthErrorMessage(error) || "회원가입에 실패했습니다.");
       }
       return;
     }
@@ -2492,12 +2602,38 @@ export default function App() {
       return;
     }
 
+    const pendingClassCode = authForm.role === "student" ? normalizeInviteCode(authForm.classJoinCode) : "";
+    const pendingClass = pendingClassCode
+      ? counselorClasses.find(item => normalizeInviteCode(item.joinCode) === pendingClassCode)
+      : null;
+    if (pendingClassCode && !pendingClass) {
+      setAuthError("상담사 코드가 올바르지 않습니다.");
+      return;
+    }
+    if (pendingClass && pendingClass.isActive === false) {
+      setAuthError("현재 비활성화된 상담사 코드입니다.");
+      return;
+    }
+    if (pendingClass) {
+      const memberCount = classMemberships.filter(item => item.classId === pendingClass.id).length;
+      if (memberCount >= (pendingClass.maxStudents || 100)) {
+        setAuthError("이 상담사의 학생 정원이 가득 찼습니다.");
+        return;
+      }
+    }
+    const pendingCounselor = pendingClass ? users.find(user => user.id === pendingClass.counselorId) : null;
+    if (pendingClass && pendingCounselor?.isActive === false) {
+      setAuthError("현재 비활성화된 상담사 계정입니다.");
+      return;
+    }
+
     const user = {
       id: createId(authForm.role),
       name: authForm.name.trim(),
       email,
       password,
       role: authForm.role,
+      isActive: true,
       gradeLevel: authForm.role === "student" ? authForm.gradeLevel : undefined,
       className: authForm.role === "student" ? authForm.className.trim() || "미배정" : undefined,
       highSchool: authForm.role === "student" ? authForm.highSchool.trim() : undefined,
@@ -2511,9 +2647,33 @@ export default function App() {
       const nextProfiles = { ...profiles, [user.id]: createProfile() };
       setProfiles(nextProfiles);
       writeJson(PROFILES_KEY, nextProfiles);
+      if (pendingClass) {
+        const nextMemberships = [
+          ...classMemberships.filter(item => item.studentId !== user.id),
+          { studentId:user.id, classId:pendingClass.id, joinedAt:new Date().toISOString() },
+        ];
+        setClassMemberships(nextMemberships);
+        writeJson(MEMBERSHIPS_KEY, nextMemberships);
+      }
     }
 
     startSession(user);
+  };
+
+  const handleResendConfirmation = async () => {
+    const email = normalizeEmail(authForm.email);
+    if (!email) {
+      setAuthError("인증 메일을 다시 보내려면 이메일을 입력해주세요.");
+      return;
+    }
+    try {
+      setAuthError("");
+      await resendConfirmationBackend(email);
+      setShowResendConfirmation(false);
+      setAuthNotice("인증 메일을 다시 보냈습니다. 메일함과 스팸함을 확인해주세요.");
+    } catch (error) {
+      setAuthError(getAuthErrorMessage(error) || "인증 메일 재전송에 실패했습니다.");
+    }
   };
 
   const logout = async () => {
@@ -2540,6 +2700,11 @@ export default function App() {
     setClassFilter("all");
     setScoreFilter("all");
     setCounselorTab("students");
+    setAdminQuery("");
+    setAdminNotice("");
+    setAdminDrafts({});
+    setJoinCode("");
+    setJoinNotice("");
     setRequestStatusFilter("pending");
     setRequestNotice("");
     setJournalNotice("");
@@ -2565,6 +2730,137 @@ export default function App() {
       else writeJson(JOURNALS_KEY, next);
       return next;
     });
+  };
+
+  const setAdminDraft = (counselorId, patch) => {
+    setAdminDrafts(prev => ({ ...prev, [counselorId]: { ...(prev[counselorId] || {}), ...patch } }));
+    setAdminNotice("");
+  };
+
+  const saveCounselorAccess = async counselor => {
+    if (!currentUser || currentUser.role !== "admin") return;
+    const draft = getAdminDraft(counselor);
+    const joinCodeValue = normalizeInviteCode(draft.joinCode);
+    const maxStudents = Math.max(1, Math.min(500, Number(draft.maxStudents) || 100));
+
+    if (!joinCodeValue) {
+      setAdminNotice("상담사 코드를 입력해주세요.");
+      return;
+    }
+    if (joinCodeValue.length < 4) {
+      setAdminNotice("상담사 코드는 4자 이상이어야 합니다.");
+      return;
+    }
+
+    const duplicate = counselorClasses.find(item => normalizeInviteCode(item.joinCode) === joinCodeValue && item.counselorId !== counselor.id);
+    if (duplicate) {
+      setAdminNotice("이미 다른 상담사가 사용 중인 코드입니다.");
+      return;
+    }
+
+    if (supabaseEnabled) {
+      try {
+        const state = await upsertBackendCounselorAccess({
+          counselorId: counselor.id,
+          name: draft.name || `${counselor.name} 학생 코드`,
+          joinCode: joinCodeValue,
+          maxStudents,
+          isActive: Boolean(draft.isActive),
+        });
+        applyBackendState(state);
+        setAdminDrafts(prev => {
+          const next = { ...prev };
+          delete next[counselor.id];
+          return next;
+        });
+        setAdminNotice(`${counselor.name} 상담사 설정을 저장했습니다.`);
+      } catch (error) {
+        setAdminNotice(error.message || "상담사 설정 저장에 실패했습니다.");
+      }
+      return;
+    }
+
+    const existing = getCounselorAccess(counselor.id);
+    const nextClass = {
+      ...(existing || {
+        id: `class-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        counselorId: counselor.id,
+        createdAt: new Date().toISOString(),
+      }),
+      name: draft.name || `${counselor.name} 학생 코드`,
+      joinCode: joinCodeValue,
+      maxStudents,
+      isActive: Boolean(draft.isActive),
+      updatedAt: new Date().toISOString(),
+    };
+    setCounselorClasses(prev => {
+      const next = existing
+        ? prev.map(item => item.id === existing.id ? nextClass : item)
+        : [...prev, nextClass];
+      writeJson(CLASSES_KEY, next);
+      return next;
+    });
+    setUsers(prev => {
+      const next = prev.map(user => user.id === counselor.id ? { ...user, isActive:Boolean(draft.isActive) } : user);
+      writeJson(USERS_KEY, next);
+      return next;
+    });
+    setAdminDrafts(prev => {
+      const next = { ...prev };
+      delete next[counselor.id];
+      return next;
+    });
+    setAdminNotice(`${counselor.name} 상담사 설정을 저장했습니다.`);
+  };
+
+  const joinClassWithCode = async e => {
+    e.preventDefault();
+    if (!currentUser || currentUser.role !== "student") return;
+    const code = normalizeInviteCode(joinCode);
+    if (!code) {
+      setJoinNotice("상담사 코드를 입력해주세요.");
+      return;
+    }
+
+    if (supabaseEnabled) {
+      try {
+        const state = await joinBackendClass(code);
+        applyBackendState(state);
+        setJoinCode("");
+        setJoinNotice("");
+      } catch (error) {
+        setJoinNotice(error.message || "상담사 코드를 확인해주세요.");
+      }
+      return;
+    }
+
+    const targetClass = counselorClasses.find(item => normalizeInviteCode(item.joinCode) === code);
+    if (!targetClass) {
+      setJoinNotice("상담사 코드를 찾을 수 없습니다.");
+      return;
+    }
+    if (targetClass.isActive === false) {
+      setJoinNotice("현재 비활성화된 상담사 코드입니다.");
+      return;
+    }
+    const targetCounselor = users.find(user => user.id === targetClass.counselorId);
+    if (targetCounselor?.isActive === false) {
+      setJoinNotice("현재 비활성화된 상담사 계정입니다.");
+      return;
+    }
+    const memberCount = classMemberships.filter(item => item.classId === targetClass.id).length;
+    if (memberCount >= (targetClass.maxStudents || 100)) {
+      setJoinNotice("이 상담사의 학생 정원이 가득 찼습니다.");
+      return;
+    }
+    const nextMemberships = [
+      ...classMemberships.filter(item => item.studentId !== currentUser.id),
+      { studentId:currentUser.id, classId:targetClass.id, joinedAt:new Date().toISOString() },
+    ];
+    setClassMemberships(nextMemberships);
+    writeJson(MEMBERSHIPS_KEY, nextMemberships);
+    setJoinCode("");
+    setJoinNotice("");
   };
 
   const submitConsultationRequest = e => {
@@ -2619,19 +2915,33 @@ export default function App() {
     window.location.href = `mailto:${student.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
   };
 
+  const myCounselorClasses = currentRole === "counselor"
+    ? counselorClasses.filter(item => item.counselorId === currentUserId)
+    : [];
+  const classById = new Map(counselorClasses.map(item => [item.id, item]));
+  const membershipByStudentId = new Map(classMemberships.map(item => [item.studentId, item]));
+  const myClassIds = new Set(myCounselorClasses.map(item => item.id));
+  const visibleStudentIds = new Set(
+    classMemberships
+      .filter(item => myClassIds.has(item.classId))
+      .map(item => item.studentId)
+  );
   const allStudentRows = users
     .filter(u => u.role === "student")
+    .filter(u => currentRole === "admin" ? true : currentRole === "counselor" ? visibleStudentIds.has(u.id) : u.id === currentUserId)
     .map((user, index) => {
       const student = withStudentMeta(user, index);
+      const membership = membershipByStudentId.get(user.id) || null;
+      const classInfo = membership ? classById.get(membership.classId) || null : null;
       const profile = profiles[user.id] || createProfile();
       const avgValue = coreAvgForGrades(profile.grades || {});
       const primaryTarget = profile.targets?.[0];
       const match = primaryTarget ? getMatchForAvg(primaryTarget, avgValue) : null;
-      return { user: student, profile, avgValue, primaryTarget, match };
+      return { user: student, profile, avgValue, primaryTarget, match, membership, classInfo };
     });
   const schoolOptions = [...new Set(allStudentRows.map(row => row.user.highSchool).filter(Boolean))].sort();
-  const classOptions = [...new Set(allStudentRows.map(row => row.user.className).filter(Boolean))].sort((a, b) => a.localeCompare(b, "ko", { numeric:true }));
-  const studentRows = allStudentRows.filter(({ user, profile, avgValue }) => {
+  const classOptions = myCounselorClasses.slice().sort((a, b) => a.name.localeCompare(b.name, "ko", { numeric:true }));
+  const studentRows = allStudentRows.filter(({ user, profile, avgValue, classInfo }) => {
       const q = studentQuery.trim().toLowerCase();
       const matchesQuery = !q
         || user.name.toLowerCase().includes(q)
@@ -2639,10 +2949,12 @@ export default function App() {
         || user.highSchool.toLowerCase().includes(q)
         || user.className.toLowerCase().includes(q)
         || user.preferredMajor.toLowerCase().includes(q)
+        || (classInfo?.name || "").toLowerCase().includes(q)
+        || (classInfo?.joinCode || "").toLowerCase().includes(q)
         || (profile.targets || []).some(t => `${t.name} ${t.dept || ""}`.toLowerCase().includes(q));
       const matchesGrade = gradeFilter === "all" || user.gradeLevel === gradeFilter;
       const matchesSchool = schoolFilter === "all" || user.highSchool === schoolFilter;
-      const matchesClass = classFilter === "all" || user.className === classFilter;
+      const matchesClass = classFilter === "all" || classInfo?.id === classFilter;
       const matchesScore =
         scoreFilter === "all"
         || (scoreFilter === "top" && avgValue && +avgValue <= 2)
@@ -2653,12 +2965,16 @@ export default function App() {
     });
 
   const groupedStudentRows = studentRows.reduce((groups, row) => {
-    const key = `${row.user.gradeLevel} ${row.user.className}`;
+    const key = row.classInfo?.id || "unassigned";
     if (!groups[key]) groups[key] = [];
     groups[key].push(row);
     return groups;
   }, {});
-  const groupKeys = Object.keys(groupedStudentRows).sort((a, b) => a.localeCompare(b, "ko", { numeric:true }));
+  const groupKeys = Object.keys(groupedStudentRows).sort((a, b) => {
+    const aName = classById.get(a)?.name || "반 미배정";
+    const bName = classById.get(b)?.name || "반 미배정";
+    return aName.localeCompare(bName, "ko", { numeric:true });
+  });
   const profileStudent = profileStudentId ? allStudentRows.find(row => row.user.id === profileStudentId) : null;
   const profileJournals = profileStudent
     ? counselingJournals
@@ -2678,7 +2994,14 @@ export default function App() {
   const studentsWithTargets = allStudentRows.filter(row => (row.profile.targets || []).length > 0);
   const studentsWithGrades = allStudentRows.filter(row => row.avgValue);
   const studentsWithRecord = allStudentRows.filter(row => row.profile.gibpu);
-  const requestRows = requests
+  const visibleRequests = currentRole === "counselor"
+    ? requests.filter(request => visibleStudentIds.has(request.studentId))
+    : currentRole === "admin"
+      ? requests
+    : currentRole === "student"
+      ? requests.filter(request => request.studentId === currentUserId)
+      : [];
+  const requestRows = visibleRequests
     .map(request => {
       const studentRow = allStudentRows.find(row => row.user.id === request.studentId);
       return { request, student: studentRow?.user, profile: studentRow?.profile };
@@ -2697,9 +3020,9 @@ export default function App() {
       return statusMatch && queryMatch;
     })
     .sort((a, b) => new Date(b.request.createdAt) - new Date(a.request.createdAt));
-  const pendingRequests = requests.filter(request => request.status === "pending");
-  const confirmedRequests = requests.filter(request => request.status === "confirmed");
-  const sentRequests = requests.filter(request => request.emailSentAt);
+  const pendingRequests = visibleRequests.filter(request => request.status === "pending");
+  const confirmedRequests = visibleRequests.filter(request => request.status === "confirmed");
+  const sentRequests = visibleRequests.filter(request => request.emailSentAt);
   const myRequests = currentUser ? requests
     .filter(request => request.studentId === currentUser.id)
     .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)) : [];
@@ -2710,6 +3033,36 @@ export default function App() {
     : !requestForm.category
       ? "상담 주제를 선택하세요"
       : "상담 신청하기";
+  const counselorUsers = users.filter(user => user.role === "counselor");
+  const getCounselorAccess = counselorId => counselorClasses.find(item => item.counselorId === counselorId) || null;
+  const getCounselorStudentCount = counselorId => {
+    const ids = new Set(counselorClasses.filter(item => item.counselorId === counselorId).map(item => item.id));
+    return classMemberships.filter(item => ids.has(item.classId)).length;
+  };
+  const getAdminDraft = counselor => {
+    const access = getCounselorAccess(counselor.id);
+    const draft = adminDrafts[counselor.id] || {};
+    return {
+      name: draft.name ?? access?.name ?? `${counselor.name} 학생 코드`,
+      joinCode: draft.joinCode ?? access?.joinCode ?? "",
+      maxStudents: draft.maxStudents ?? access?.maxStudents ?? 100,
+      isActive: draft.isActive ?? (access ? access.isActive !== false : counselor.isActive !== false),
+    };
+  };
+  const adminCounselorRows = counselorUsers
+    .map(counselor => ({
+      counselor,
+      access: getCounselorAccess(counselor.id),
+      studentCount: getCounselorStudentCount(counselor.id),
+      draft: getAdminDraft(counselor),
+    }))
+    .filter(({ counselor, access }) => {
+      const q = adminQuery.trim().toLowerCase();
+      if (!q) return true;
+      return counselor.name.toLowerCase().includes(q)
+        || counselor.email.toLowerCase().includes(q)
+        || (access?.joinCode || "").toLowerCase().includes(q);
+    });
   const roadmapState = buildRoadmapState(checklist);
   const checklistDoneCount = roadmapState.doneCount;
   const checklistProgress = roadmapState.progress;
@@ -3127,8 +3480,8 @@ export default function App() {
               <div className="auth-sub">{authMode === "login" ? "계정으로 계속하기" : "역할을 선택하고 계정을 만드세요"}</div>
 
               <div className="seg">
-                <button type="button" className={`seg-btn${authMode === "login" ? " active" : ""}`} onClick={() => { setAuthMode("login"); setAuthError(""); }}>로그인</button>
-                <button type="button" className={`seg-btn${authMode === "signup" ? " active" : ""}`} onClick={() => { setAuthMode("signup"); setAuthError(""); }}>회원가입</button>
+                <button type="button" className={`seg-btn${authMode === "login" ? " active" : ""}`} onClick={() => { setAuthMode("login"); setAuthError(""); setAuthNotice(""); }}>로그인</button>
+                <button type="button" className={`seg-btn${authMode === "signup" ? " active" : ""}`} onClick={() => { setAuthMode("signup"); setAuthError(""); setAuthNotice(""); }}>회원가입</button>
               </div>
 
               {authMode === "signup" && (
@@ -3151,9 +3504,9 @@ export default function App() {
                         <label htmlFor="auth-major">희망 학과</label>
                         <input id="auth-major" className="auth-input" value={authForm.preferredMajor} onChange={e => setAuthValue("preferredMajor", e.target.value)} placeholder="예: 컴퓨터공학과" />
                       </div>
-                      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8 }}>
-                        <div className="field">
-                          <label htmlFor="auth-grade">학년</label>
+	                      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8 }}>
+	                        <div className="field">
+	                          <label htmlFor="auth-grade">학년</label>
                           <select id="auth-grade" className="auth-input" value={authForm.gradeLevel} onChange={e => setAuthValue("gradeLevel", e.target.value)}>
                             <option value="1학년">1학년</option>
                             <option value="2학년">2학년</option>
@@ -3162,11 +3515,22 @@ export default function App() {
                         </div>
                         <div className="field">
                           <label htmlFor="auth-class">반</label>
-                          <input id="auth-class" className="auth-input" value={authForm.className} onChange={e => setAuthValue("className", e.target.value)} placeholder="예: 3-1" />
-                        </div>
-                      </div>
-                    </>
-                  )}
+	                          <input id="auth-class" className="auth-input" value={authForm.className} onChange={e => setAuthValue("className", e.target.value)} placeholder="예: 3-1" />
+	                        </div>
+	                      </div>
+	                      <div className="field">
+	                        <label htmlFor="auth-class-code">상담사 코드</label>
+	                        <input
+	                          id="auth-class-code"
+	                          className="auth-input"
+	                          value={authForm.classJoinCode}
+	                          onChange={e => setAuthValue("classJoinCode", e.target.value)}
+	                          placeholder="상담사에게 받은 학생용 코드"
+	                          autoComplete="off"
+	                        />
+	                      </div>
+	                    </>
+	                  )}
                   {authForm.role === "counselor" && (
                     <div className="field">
                       <label htmlFor="auth-counselor-code">상담사 초대 코드</label>
@@ -3192,7 +3556,13 @@ export default function App() {
                 <input id="auth-password" className="auth-input" type="password" value={authForm.password} onChange={e => setAuthValue("password", e.target.value)} autoComplete={authMode === "login" ? "current-password" : "new-password"} />
               </div>
 
+              {authNotice && <div className="auth-notice">{authNotice}</div>}
               {authError && <div className="auth-error">{authError}</div>}
+              {showResendConfirmation && supabaseEnabled && (
+                <button type="button" className="ghost-btn auth-resend-btn" onClick={handleResendConfirmation}>
+                  인증 메일 다시 보내기
+                </button>
+              )}
               <button className="primary-btn" type="submit">{authMode === "login" ? "로그인" : "가입하기"}</button>
 
               {backendError && <div className="auth-error">{backendError}</div>}
@@ -3200,6 +3570,7 @@ export default function App() {
                 <div className="ghost-row">
                   <button type="button" className="ghost-btn" onClick={() => loginWithUser(users.find(u => u.email === "minseo@student.test"))}>학생 체험</button>
                   <button type="button" className="ghost-btn" onClick={() => loginWithUser(users.find(u => u.email === "counselor@test.com"))}>상담사 체험</button>
+                  <button type="button" className="ghost-btn" onClick={() => loginWithUser(users.find(u => u.email === "admin@test.com"))}>관리자 체험</button>
                 </div>
               )}
             </form>
@@ -3207,9 +3578,177 @@ export default function App() {
         </div>
       </>
     );
-  }
+	  }
 
-  if (currentRole === "counselor") {
+	  if (currentRole === "admin") {
+	    return (
+	      <>
+	        <style>{css}</style>
+	        <div className="root">
+	          <aside className="sidebar">
+	            <div className="logo">입시<span>플래너</span> 🎓</div>
+	            <div className="nav-section">
+	              <div className="nav-label">총관리자</div>
+	              <button className="nav-btn active" type="button"><span>⚙️</span>운영 관리</button>
+	            </div>
+	            <div className="sidebar-spacer" />
+	            <div className="userbox">
+	              <div className="user-name">{currentUser.name}</div>
+	              <div className="user-meta">{currentUser.email}</div>
+	              <button className="logout-btn" type="button" onClick={logout}>로그아웃</button>
+	            </div>
+	          </aside>
+	          <main className="main">
+	            <div className="ptitle">총관리자 대시보드</div>
+	            <div className="psub">상담사별 학생용 코드, 정원, 활성 상태와 연결된 학생을 관리합니다</div>
+
+	            <div className="cstats">
+	              <div className="cstat"><div className="cstat-label">상담사</div><div className="cstat-value">{counselorUsers.length}</div></div>
+	              <div className="cstat"><div className="cstat-label">활성 코드</div><div className="cstat-value">{counselorClasses.filter(item => item.isActive !== false).length}</div></div>
+	              <div className="cstat"><div className="cstat-label">학생</div><div className="cstat-value">{allStudents.length}</div></div>
+	              <div className="cstat"><div className="cstat-label">미배정 학생</div><div className="cstat-value">{allStudentRows.filter(row => !row.classInfo).length}</div></div>
+	            </div>
+
+	            <section className="profile-section">
+	              <div className="request-top">
+	                <div>
+	                  <div className="secl">상담사 가입 공용 코드</div>
+	                  <div className="mini-body">상담사가 회원가입할 때 쓰는 공용 승인 코드입니다. 학생에게 주는 코드는 아래에서 상담사별로 따로 관리합니다.</div>
+	                </div>
+	                <span className="status-pill sent">{COUNSELOR_INVITE_CODE}</span>
+	              </div>
+	              <div className="sw" style={{ marginBottom:0 }}>
+	                <span className="ico">🔍</span>
+	                <input type="search" value={adminQuery} onChange={e => setAdminQuery(e.target.value)} placeholder="상담사명, 이메일, 학생용 코드 검색" />
+	              </div>
+	            </section>
+
+	            {adminNotice && <div className={`ai-notice${adminNotice.includes("저장") ? " done" : ""}`}>{adminNotice}</div>}
+
+	            <div className="admin-counselor-list">
+	              {adminCounselorRows.map(({ counselor, access, studentCount, draft }) => {
+	                const studentRowsForCounselor = allStudentRows.filter(row => row.classInfo?.counselorId === counselor.id);
+	                return (
+	                  <section key={counselor.id} className="admin-counselor-card">
+	                    <div className="admin-counselor-head">
+	                      <div>
+	                        <div className="student-name">{counselor.name}</div>
+	                        <div className="student-email">{counselor.email}</div>
+	                      </div>
+	                      <span className={`status-pill${draft.isActive ? " confirmed" : ""}`}>{draft.isActive ? "활성" : "비활성"}</span>
+	                    </div>
+	                    <div className="admin-form-grid">
+	                      <div className="field">
+	                        <label htmlFor={`admin-access-name-${counselor.id}`}>관리 이름</label>
+	                        <input id={`admin-access-name-${counselor.id}`} className="auth-input" value={draft.name} onChange={e => setAdminDraft(counselor.id, { name:e.target.value })} />
+	                      </div>
+	                      <div className="field">
+	                        <label htmlFor={`admin-access-code-${counselor.id}`}>학생용 코드</label>
+	                        <input id={`admin-access-code-${counselor.id}`} className="auth-input" value={draft.joinCode} onChange={e => setAdminDraft(counselor.id, { joinCode:e.target.value })} placeholder="예: DAYNA2026" autoComplete="off" />
+	                      </div>
+	                      <div className="field">
+	                        <label htmlFor={`admin-access-max-${counselor.id}`}>최대 학생 수</label>
+	                        <input id={`admin-access-max-${counselor.id}`} className="auth-input" type="number" min="1" max="500" value={draft.maxStudents} onChange={e => setAdminDraft(counselor.id, { maxStudents:e.target.value })} />
+	                      </div>
+	                      <label className="admin-toggle">
+	                        <input type="checkbox" checked={Boolean(draft.isActive)} onChange={e => setAdminDraft(counselor.id, { isActive:e.target.checked })} />
+	                        <span>활성화</span>
+	                      </label>
+	                    </div>
+	                    <div className="admin-capacity">
+	                      <div className="mbar" style={{ flex:1, marginTop:0 }}>
+	                        <div style={{ height:"100%", width:`${Math.min(100, studentCount / Math.max(1, Number(draft.maxStudents) || 100) * 100)}%`, background:"#0EA5E9", borderRadius:8 }} />
+	                      </div>
+	                      <strong>{studentCount}/{Number(draft.maxStudents) || 100}명</strong>
+	                      <button className="small-primary" type="button" onClick={() => saveCounselorAccess(counselor)}>저장</button>
+	                    </div>
+	                    <div className="admin-student-list">
+	                      {studentRowsForCounselor.map(row => (
+	                        <span key={row.user.id} className="admin-student-chip">
+	                          {row.user.name} · {row.user.highSchool} · {row.user.preferredMajor}
+	                        </span>
+	                      ))}
+	                      {!studentRowsForCounselor.length && <div className="assignment-empty">아직 연결된 학생이 없습니다</div>}
+	                    </div>
+	                  </section>
+	                );
+	              })}
+	              {!adminCounselorRows.length && <div className="empty" style={{ padding:"48px 20px" }}>조건에 맞는 상담사가 없습니다</div>}
+	            </div>
+
+	            <section className="profile-section">
+	              <div className="request-top">
+	                <div>
+	                  <div className="secl">전체 학생</div>
+	                  <div className="mini-body">상담사 코드로 연결된 학생과 아직 배정되지 않은 학생을 함께 확인합니다.</div>
+	                </div>
+	                <span className="status-pill sent">{allStudentRows.length}명</span>
+	              </div>
+	              <div className="admin-student-table">
+	                {allStudentRows.map(row => (
+	                  <div key={row.user.id} className="admin-student-row">
+	                    <div>
+	                      <div className="student-name">{row.user.name}</div>
+	                      <div className="student-email">{row.user.email}</div>
+	                    </div>
+	                    <div>{row.user.highSchool}</div>
+	                    <div>{row.user.preferredMajor}</div>
+	                    <div>{row.classInfo?.name || "미배정"}</div>
+	                    <div>{row.avgValue ? `${(+row.avgValue).toFixed(1)}등급` : "성적 미입력"}</div>
+	                  </div>
+	                ))}
+	              </div>
+	            </section>
+	          </main>
+	        </div>
+	      </>
+	    );
+	  }
+
+	  if (currentRole === "student" && !currentStudentMembership) {
+	    return (
+	      <>
+	        <style>{css}</style>
+	        <main className="auth-root">
+	          <form className="auth-card join-card" onSubmit={joinClassWithCode}>
+	            <div className="auth-title">상담사 코드 입력</div>
+	            <div className="auth-sub">담당 상담사에게 받은 학생용 코드를 입력하면 입시플래너가 열립니다.</div>
+	            <div className="field">
+	              <label htmlFor="join-class-code">상담사 코드</label>
+	              <input
+	                id="join-class-code"
+	                className="auth-input"
+	                value={joinCode}
+	                onChange={e => { setJoinCode(e.target.value); setJoinNotice(""); }}
+	                placeholder="예: PARK3"
+	                autoComplete="off"
+	              />
+	            </div>
+	            {joinNotice && <div className="auth-error">{joinNotice}</div>}
+	            <button className="primary-btn" type="submit">입장하기</button>
+	            <button className="logout-btn" type="button" onClick={logout}>로그아웃</button>
+	          </form>
+	        </main>
+	      </>
+	    );
+	  }
+
+	  if (currentRole === "counselor" && currentUser.isActive === false) {
+	    return (
+	      <>
+	        <style>{css}</style>
+	        <main className="auth-root">
+	          <div className="auth-card join-card">
+	            <div className="auth-title">계정 비활성화</div>
+	            <div className="auth-sub">총관리자가 상담사 계정을 다시 활성화하면 학생 관리 화면을 사용할 수 있습니다.</div>
+	            <button className="logout-btn" type="button" onClick={logout}>로그아웃</button>
+	          </div>
+	        </main>
+	      </>
+	    );
+	  }
+
+	  if (currentRole === "counselor") {
     return (
       <>
         <style>{css}</style>
@@ -3221,6 +3760,9 @@ export default function App() {
               <button className={`nav-btn${counselorTab === "students" ? " active" : ""}`} type="button" onClick={() => { setCounselorTab("students"); setProfileStudentId(null); }}>
                 <span>👥</span>학생 관리
               </button>
+	              <button className={`nav-btn${counselorTab === "classes" ? " active" : ""}`} type="button" onClick={() => { setCounselorTab("classes"); setProfileStudentId(null); }}>
+	                <span>🔑</span>내 코드
+	              </button>
               <button className={`nav-btn${counselorTab === "requests" ? " active" : ""}`} type="button" onClick={() => { setCounselorTab("requests"); setProfileStudentId(null); }}>
                 <span>✉️</span>상담 신청
                 {pendingRequests.length > 0 && <span style={{ marginLeft:"auto", fontSize:11, color:"#DC2626", fontWeight:700 }}>{pendingRequests.length}</span>}
@@ -3240,7 +3782,7 @@ export default function App() {
                 <div className="psub">학생이 신청한 상담을 확인하고 확정 이메일을 작성합니다</div>
 
                 <div className="cstats">
-                  <div className="cstat"><div className="cstat-label">전체 신청</div><div className="cstat-value">{requests.length}</div></div>
+	                  <div className="cstat"><div className="cstat-label">전체 신청</div><div className="cstat-value">{visibleRequests.length}</div></div>
                   <div className="cstat"><div className="cstat-label">대기</div><div className="cstat-value">{pendingRequests.length}</div></div>
                   <div className="cstat"><div className="cstat-label">확정</div><div className="cstat-value">{confirmedRequests.length}</div></div>
                   <div className="cstat"><div className="cstat-label">이메일 작성</div><div className="cstat-value">{sentRequests.length}</div></div>
@@ -3305,7 +3847,31 @@ export default function App() {
                   )}
                 </div>
               </>
-            ) : profileStudent ? (
+	            ) : counselorTab === "classes" ? (
+	              <>
+	                <div className="ptitle">내 학생용 코드</div>
+	                <div className="psub">총관리자가 발급한 코드를 학생에게 공유하세요. 코드는 상담사가 직접 수정할 수 없습니다</div>
+
+	                <div className="class-admin-grid">
+	                  {myCounselorClasses.map(item => {
+	                    const memberCount = classMemberships.filter(membership => membership.classId === item.id).length;
+	                    return (
+	                      <section key={item.id} className="class-admin-card">
+	                        <div className="class-admin-top">
+	                          <div>
+	                            <div className="class-title">{item.name}</div>
+	                            <div className="class-meta">학생 {memberCount}/{item.maxStudents || 100}명 · {item.isActive === false ? "비활성" : "활성"}</div>
+	                          </div>
+	                          <span className={`status-pill${item.isActive !== false ? " confirmed" : ""}`}>{item.isActive === false ? "중지됨" : "사용 가능"}</span>
+	                        </div>
+	                        <div className="class-code-box">{item.joinCode}</div>
+	                      </section>
+	                    );
+	                  })}
+	                  {!myCounselorClasses.length && <div className="empty" style={{ padding:"48px 20px" }}>총관리자가 학생용 코드를 발급하면 여기에 표시됩니다</div>}
+	                </div>
+	              </>
+	            ) : profileStudent ? (
               <>
                 <button className="back-btn" type="button" onClick={() => setProfileStudentId(null)}>← 학생 목록</button>
                 <div className="profile-head">
@@ -3891,9 +4457,9 @@ export default function App() {
                   <div className="filter-field">
                     <label htmlFor="class-filter">반</label>
                     <select id="class-filter" value={classFilter} onChange={e => setClassFilter(e.target.value)}>
-                      <option value="all">전체</option>
-                      {classOptions.map(c => <option key={c} value={c}>{c}</option>)}
-                    </select>
+	                      <option value="all">전체</option>
+	                      {classOptions.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+	                    </select>
                   </div>
                   <div className="filter-field">
                     <label htmlFor="score-filter">성적</label>
@@ -3912,18 +4478,19 @@ export default function App() {
                   <button className="link-btn" type="button" onClick={() => { setStudentQuery(""); setGradeFilter("all"); setSchoolFilter("all"); setClassFilter("all"); setScoreFilter("all"); }}>필터 초기화</button>
                 </div>
 
-                {groupKeys.map(group => {
-                  const rows = groupedStudentRows[group];
-                  const schools = [...new Set(rows.map(row => row.user.highSchool))].join(", ");
-                  return (
-                    <section key={group} className="class-group">
-                      <div className="class-head">
-                        <div>
-                          <div className="class-title">{group}</div>
-                          <div className="class-meta">{schools}</div>
-                        </div>
-                        <span className="badge btag">{rows.length}명</span>
-                      </div>
+	                {groupKeys.map(group => {
+	                  const rows = groupedStudentRows[group];
+	                  const classInfo = classById.get(group) || rows[0]?.classInfo || null;
+	                  const schools = [...new Set(rows.map(row => row.user.highSchool))].join(", ");
+	                  return (
+	                    <section key={group} className="class-group">
+	                      <div className="class-head">
+	                        <div>
+	                          <div className="class-title">{classInfo?.name || "반 미배정"}</div>
+	                          <div className="class-meta">{schools}{classInfo?.joinCode ? ` · 코드 ${classInfo.joinCode}` : ""}</div>
+	                        </div>
+	                        <span className="badge btag">{rows.length}명</span>
+	                      </div>
                       {rows.map(({ user, profile, avgValue, match }) => (
                         <button key={user.id} className="student-card-row" type="button" onClick={() => setProfileStudentId(user.id)}>
                           <div>
@@ -3962,14 +4529,18 @@ export default function App() {
               </>
             )}
           </main>
-          <nav className="mobile-nav two" aria-label="상담사 모바일 메뉴">
-            <button className={`mobile-nav-btn${counselorTab === "students" ? " active" : ""}`} type="button" onClick={() => { setCounselorTab("students"); setProfileStudentId(null); }}>
-              <span>👥</span>
-              학생관리
-            </button>
-            <button className={`mobile-nav-btn${counselorTab === "requests" ? " active" : ""}`} type="button" onClick={() => { setCounselorTab("requests"); setProfileStudentId(null); }}>
-              <span>✉️</span>
-              상담신청
+	          <nav className="mobile-nav three" aria-label="상담사 모바일 메뉴">
+	            <button className={`mobile-nav-btn${counselorTab === "students" ? " active" : ""}`} type="button" onClick={() => { setCounselorTab("students"); setProfileStudentId(null); }}>
+	              <span>👥</span>
+	              학생관리
+	            </button>
+	            <button className={`mobile-nav-btn${counselorTab === "classes" ? " active" : ""}`} type="button" onClick={() => { setCounselorTab("classes"); setProfileStudentId(null); }}>
+	              <span>🔑</span>
+	              내코드
+	            </button>
+	            <button className={`mobile-nav-btn${counselorTab === "requests" ? " active" : ""}`} type="button" onClick={() => { setCounselorTab("requests"); setProfileStudentId(null); }}>
+	              <span>✉️</span>
+	              상담신청
             </button>
           </nav>
         </div>
