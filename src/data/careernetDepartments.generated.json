@@ -1,8 +1,8 @@
 {
   "_meta": {
-    "generatedAt": "2026-05-20T06:13:51.569Z",
+    "generatedAt": "2026-05-20T06:21:24.243Z",
     "majorCount": 501,
-    "schoolKeyCount": 869
+    "schoolKeyCount": 870
   },
   "가야대학교": {
     "status": "ready",
@@ -7437,6 +7437,19 @@
     "departments": [
       "의예과",
       "의학과"
+    ]
+  },
+  "공군사관학교": {
+    "status": "ready",
+    "source": "careernet",
+    "departments": [
+      "국방경영학",
+      "국제관계학",
+      "군사학",
+      "기계공학",
+      "전자통신공학",
+      "컴퓨터과학",
+      "항공우주공학"
     ]
   },
   "공주교육대학교": {

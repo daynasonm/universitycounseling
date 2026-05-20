@@ -12,6 +12,17 @@ const stripSchoolKey = name => String(name || "")
   .replace(/\([^)]*\)/g, "")
   .replace(/[\s·ㆍ\-_.]/g, "")
   .trim();
+const manualSchoolDepartments = {
+  공군사관학교: [
+    "항공우주공학",
+    "기계공학",
+    "전자통신공학",
+    "컴퓨터과학",
+    "국제관계학",
+    "국방경영학",
+    "군사학",
+  ],
+};
 
 async function readLocalEnv() {
   try {
@@ -80,14 +91,17 @@ async function loadMajorUniversities(major) {
   });
 }
 
-function addDepartment(index, key, department) {
+function addDepartment(index, key, department, source = "careernet") {
   if (!key || !department) return;
   if (!index[key]) {
     index[key] = {
       status: "ready",
-      source: "careernet",
+      source,
       departments: [],
     };
+  }
+  if (index[key].source !== source && !index[key].source.includes(source)) {
+    index[key].source = `${index[key].source}+${source}`;
   }
   index[key].departments.push(department);
 }
@@ -118,6 +132,11 @@ async function main() {
       console.log(`CareerNet majors processed: ${completed}/${majors.length}`);
     }
   }
+
+  Object.entries(manualSchoolDepartments).forEach(([schoolName, departments]) => {
+    const schoolKey = stripSchoolKey(schoolName);
+    departments.forEach(department => addDepartment(departmentIndex, schoolKey, department, "manual"));
+  });
 
   const sorted = Object.fromEntries(Object.entries(departmentIndex)
     .map(([key, value]) => [key, {
