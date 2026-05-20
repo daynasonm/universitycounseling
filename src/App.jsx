@@ -10,7 +10,6 @@ import {
   saveBackendProfile,
   saveBackendUser,
   upsertBackendCounselorAccess,
-  setBackendUserRole,
   joinBackendClass,
   upsertBackendRequests,
   upsertBackendJournals,
@@ -1589,8 +1588,7 @@ select:focus{border-color:#0EA5E9;}
 .admin-student-chip{border:1px solid #E5EAF1;border-radius:999px;background:#F8FAFC;color:#4B5563;font-size:12px;font-weight:700;padding:7px 10px;font-family:'Noto Sans KR',sans-serif;}
 .admin-student-table{display:grid;gap:8px;}
 .admin-student-row{display:grid;grid-template-columns:1.2fr 0.9fr 1fr 1fr 0.7fr;gap:10px;align-items:center;border:1px solid #EEF2F7;border-radius:12px;background:#F8FAFC;padding:12px;font-size:12.5px;color:#4B5563;}
-.admin-user-row{grid-template-columns:1.3fr 0.7fr 1fr 1.1fr;}
-.admin-role-actions{display:flex;gap:7px;flex-wrap:wrap;justify-content:flex-end;}
+.admin-user-row{grid-template-columns:1.3fr 0.7fr 1fr;}
 .role-pill{display:inline-flex;align-items:center;justify-content:center;border-radius:999px;padding:5px 10px;font-size:11px;font-weight:900;background:#EEF2F7;color:#4B5563;}
 .role-pill.student{background:#EAF7FF;color:#0EA5E9;}
 .role-pill.counselor{background:#FFF7ED;color:#C2410C;}
@@ -2794,40 +2792,6 @@ export default function App() {
     setAdminNotice(`${counselor.name} 상담사 설정을 저장했습니다.`);
   };
 
-  const changeUserRole = async (targetUser, nextRole) => {
-    if (!currentUser || currentUser.role !== "admin" || !targetUser || targetUser.role === nextRole) return;
-    if (nextRole !== "counselor") return;
-
-    if (supabaseEnabled) {
-      try {
-        const state = await setBackendUserRole({ userId:targetUser.id, role:nextRole, isActive:true });
-        applyBackendState(state);
-        setAdminNotice(`${targetUser.name} 계정을 상담사로 변경했습니다.`);
-      } catch (error) {
-        setAdminNotice(error.message || "역할 변경에 실패했습니다.");
-      }
-      return;
-    }
-
-    setUsers(prev => {
-      const next = prev.map(user => user.id === targetUser.id ? { ...user, role:nextRole, isActive:true } : user);
-      writeJson(USERS_KEY, next);
-      return next;
-    });
-    setProfiles(prev => {
-      const next = { ...prev };
-      delete next[targetUser.id];
-      writeJson(PROFILES_KEY, next);
-      return next;
-    });
-    setClassMemberships(prev => {
-      const next = prev.filter(item => item.studentId !== targetUser.id);
-      writeJson(MEMBERSHIPS_KEY, next);
-      return next;
-    });
-    setAdminNotice(`${targetUser.name} 계정을 상담사로 변경했습니다.`);
-  };
-
   const joinClassWithCode = async e => {
     e.preventDefault();
     if (!currentUser || currentUser.role !== "student") return;
@@ -3637,8 +3601,8 @@ export default function App() {
 	            <section className="profile-section">
 	              <div className="request-top">
 	                <div>
-	                  <div className="secl">가입자 역할 관리</div>
-	                  <div className="mini-body">학생으로 가입된 사용자를 상담사로 전환합니다. 상담사 계정은 이 화면에서 학생으로 되돌리지 않습니다.</div>
+	                  <div className="secl">가입자 목록</div>
+	                  <div className="mini-body">가입된 학생과 상담사 계정을 확인합니다. 상담사 전환은 이 화면에서 처리하지 않습니다.</div>
 	                </div>
 	                <span className="status-pill sent">{manageableUsers.length}명</span>
 	              </div>
@@ -3651,13 +3615,6 @@ export default function App() {
 	                    </div>
 	                    <div><span className={`role-pill ${user.role}`}>{roleLabels[user.role] || user.role}</span></div>
 	                    <div>{user.role === "student" ? user.highSchool || "학교 미입력" : getCounselorAccess(user.id)?.joinCode || "코드 미발급"}</div>
-	                    <div className="admin-role-actions">
-	                      {user.role === "student" ? (
-	                        <button className="small-primary" type="button" onClick={() => changeUserRole(user, "counselor")}>상담사로</button>
-	                      ) : (
-	                        <span className="role-pill counselor">상담사 등록됨</span>
-	                      )}
-	                    </div>
 	                  </div>
 	                ))}
 	                {!manageableUsers.length && <div className="empty" style={{ padding:"36px 20px" }}>가입자가 없습니다</div>}
