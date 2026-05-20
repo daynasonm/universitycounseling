@@ -127,7 +127,7 @@ const REGION_NAME_MAP = {
 const DEPARTMENT_FILTERS = [
   { key:"all", label:"전체 학과", terms:[] },
   { key:"computer", label:"컴퓨터·AI", terms:["컴퓨터","소프트웨어","전산","AI","인공지능","데이터","정보"] },
-  { key:"engineering", label:"공학", terms:["공학","전자","전기","기계","화학공학","건축","산업","반도체"] },
+  { key:"engineering", label:"공학", terms:["공학","전자","전기","기계","화학공학","건축","산업","반도체","항공","운항","우주","드론"] },
   { key:"business", label:"경영·경제", terms:["경영","경제","금융","회계","무역","통계"] },
   { key:"medical", label:"의약·보건", terms:["의예","의학","간호","약학","치의","한의","보건"] },
   { key:"education", label:"교육", terms:["교육","사범","초등","유아교육"] },
@@ -148,12 +148,42 @@ const DEPT_PRESETS = {
   arts: ["디자인학부","영상학과","체육학과","음악학과"],
 };
 const UNIVERSITY_COLORS = ["#001A57","#0EA5E9","#F97316","#0B1324","#005B9E","#006E3C","#8B1A1A","#00338D","#0284C7"];
+const SPECIAL_UNIVERSITY_PROFILES = {
+  "공군사관학교": {
+    depts: ["항공우주공학","기계공학","전자통신공학","컴퓨터과학","국제관계학","국방경영학","군사학","공군 조종사 과정"],
+    keywords: ["공사","공군","공군사관학교","공군 조종사","전투기 조종사","비행기 조종사","조종사","파일럿","pilot","항공","비행","사관학교"],
+  },
+  "한국항공대학교": {
+    depts: ["항공운항학과","항공교통물류학부","항공우주및기계공학부","항공전자정보공학부","스마트드론공학과","항공재료공학과","소프트웨어학과","경영학과","항공우주법학과"],
+    keywords: ["항공대","한국항공대","한국항공대학교","한국 항공","한국 항공 학교","항공운항","비행기 조종사","민간항공 조종사","조종사","파일럿","pilot","항공","비행","드론"],
+  },
+  "한서대학교": {
+    depts: ["항공운항학과","헬리콥터조종학과","항공교통물류학과","항공정비학과","항공관광학과","항공소프트웨어공학과","항공보안시스템전공"],
+    keywords: ["한서대","항공운항","헬리콥터조종","비행기 조종사","조종사","파일럿","pilot","항공","비행"],
+  },
+  "청주대학교": {
+    depts: ["항공운항학과","항공기계공학과","항공서비스학과","무인항공기학과","항공교통학과"],
+    keywords: ["청주대","항공운항","비행기 조종사","조종사","파일럿","pilot","항공","비행","무인항공"],
+  },
+  "극동대학교": {
+    depts: ["항공운항학과","항공정비학과","항공안전관리학과","항공서비스학과","무인기산업학과"],
+    keywords: ["극동대","항공운항","비행기 조종사","조종사","파일럿","pilot","항공","비행","무인기"],
+  },
+  "중원대학교": {
+    depts: ["항공운항학과","항공정비학과","항공서비스학과","무인항공기계학과","드론봇군사학과"],
+    keywords: ["중원대","항공운항","비행기 조종사","조종사","파일럿","pilot","항공","비행","무인항공","드론"],
+  },
+  "초당대학교": {
+    depts: ["항공운항학과","항공정비학과","항공서비스학과","드론학과","항공교통물류학과"],
+    keywords: ["초당대","항공운항","비행기 조종사","조종사","파일럿","pilot","항공","비행","드론"],
+  },
+};
 const NATIONAL_UNIVERSITY_ROWS = [
   ["서울시립대학교","서울시립대","서울","공립",2],["건국대학교","건국대","서울","사립",2],["동국대학교","동국대","서울","사립",2],["홍익대학교","홍익대","서울","사립",2],["중앙대학교","중앙대","서울","사립",2],["경희대학교","경희대","서울","사립",2],["한국외국어대학교","한국외대","서울","사립",2],["서울과학기술대학교","서울과기대","서울","국립",2],["국민대학교","국민대","서울","사립",3],["숭실대학교","숭실대","서울","사립",3],["세종대학교","세종대","서울","사립",3],["광운대학교","광운대","서울","사립",3],["상명대학교","상명대","서울","사립",3],["숙명여자대학교","숙명여대","서울","사립",3],["동덕여자대학교","동덕여대","서울","사립",3],["덕성여자대학교","덕성여대","서울","사립",3],["서울여자대학교","서울여대","서울","사립",3],["삼육대학교","삼육대","서울","사립",3],["서경대학교","서경대","서울","사립",4],["한성대학교","한성대","서울","사립",4],
   ["가톨릭대학교","가톨릭대","경기","사립",3],["아주대학교","아주대","경기","사립",2],["인하대학교","인하대","인천","사립",2],["인천대학교","인천대","인천","국립",3],["경기대학교","경기대","경기","사립",3],["단국대학교","단국대","경기","사립",3],["명지대학교","명지대","경기","사립",3],["가천대학교","가천대","경기","사립",3],["한국항공대학교","항공대","경기","사립",3],["한국공학대학교","한국공대","경기","사립",3],["한양대학교 ERICA","한양대 ERICA","경기","사립",3],["용인대학교","용인대","경기","사립",4],["수원대학교","수원대","경기","사립",4],["강남대학교","강남대","경기","사립",4],["평택대학교","평택대","경기","사립",4],["차의과학대학교","차의과학대","경기","사립",4],["협성대학교","협성대","경기","사립",4],["한경국립대학교","한경국립대","경기","국립",4],
-  ["강원대학교","강원대","강원","국립",3],["연세대학교 미래캠퍼스","연세대 미래","강원","사립",3],["한림대학교","한림대","강원","사립",3],["상지대학교","상지대","강원","사립",4],["가톨릭관동대학교","가톨릭관동대","강원","사립",4],["충북대학교","충북대","충북","국립",3],["한국교원대학교","한국교원대","충북","국립",3],["청주대학교","청주대","충북","사립",4],["서원대학교","서원대","충북","사립",4],["충남대학교","충남대","대전","국립",3],["한밭대학교","한밭대","대전","국립",3],["건양대학교","건양대","충남","사립",4],["공주대학교","공주대","충남","국립",3],["순천향대학교","순천향대","충남","사립",3],["호서대학교","호서대","충남","사립",4],["백석대학교","백석대","충남","사립",4],["단국대학교 천안캠퍼스","단국대 천안","충남","사립",3],["고려대학교 세종캠퍼스","고려대 세종","세종","사립",3],["홍익대학교 세종캠퍼스","홍익대 세종","세종","사립",3],
+  ["강원대학교","강원대","강원","국립",3],["연세대학교 미래캠퍼스","연세대 미래","강원","사립",3],["한림대학교","한림대","강원","사립",3],["상지대학교","상지대","강원","사립",4],["가톨릭관동대학교","가톨릭관동대","강원","사립",4],["충북대학교","충북대","충북","국립",3],["공군사관학교","공사","충북","사관학교",1],["한국교원대학교","한국교원대","충북","국립",3],["청주대학교","청주대","충북","사립",4],["서원대학교","서원대","충북","사립",4],["충남대학교","충남대","대전","국립",3],["한밭대학교","한밭대","대전","국립",3],["건양대학교","건양대","충남","사립",4],["공주대학교","공주대","충남","국립",3],["순천향대학교","순천향대","충남","사립",3],["호서대학교","호서대","충남","사립",4],["백석대학교","백석대","충남","사립",4],["한서대학교","한서대","충남","사립",4],["극동대학교","극동대","충북","사립",4],["중원대학교","중원대","충북","사립",4],["단국대학교 천안캠퍼스","단국대 천안","충남","사립",3],["고려대학교 세종캠퍼스","고려대 세종","세종","사립",3],["홍익대학교 세종캠퍼스","홍익대 세종","세종","사립",3],
   ["전북대학교","전북대","전북","국립",3],["군산대학교","군산대","전북","국립",4],["원광대학교","원광대","전북","사립",4],["전주대학교","전주대","전북","사립",4],["우석대학교","우석대","전북","사립",4],["전남대학교","전남대","광주","국립",3],["조선대학교","조선대","광주","사립",4],["광주과학기술원","GIST","광주","국립",1],["광주대학교","광주대","광주","사립",4],["목포대학교","목포대","전남","국립",4],["순천대학교","순천대","전남","국립",4],["동신대학교","동신대","전남","사립",4],
-  ["경북대학교","경북대","대구","국립",2],["계명대학교","계명대","대구","사립",3],["영남대학교","영남대","경북","사립",3],["금오공과대학교","금오공대","경북","국립",3],["안동대학교","안동대","경북","국립",4],["대구대학교","대구대","경북","사립",4],["대구가톨릭대학교","대구가톨릭대","경북","사립",4],["대구한의대학교","대구한의대","경북","사립",4],["울산대학교","울산대","울산","사립",3],["UNIST","UNIST","울산","국립",1],
+  ["경북대학교","경북대","대구","국립",2],["계명대학교","계명대","대구","사립",3],["영남대학교","영남대","경북","사립",3],["금오공과대학교","금오공대","경북","국립",3],["안동대학교","안동대","경북","국립",4],["대구대학교","대구대","경북","사립",4],["대구가톨릭대학교","대구가톨릭대","경북","사립",4],["대구한의대학교","대구한의대","경북","사립",4],["울산대학교","울산대","울산","사립",3],["UNIST","UNIST","울산","국립",1],["초당대학교","초당대","전남","사립",4],
   ["경상국립대학교","경상국립대","경남","국립",3],["창원대학교","창원대","경남","국립",4],["인제대학교","인제대","경남","사립",4],["경남대학교","경남대","경남","사립",4],["동아대학교","동아대","부산","사립",3],["부경대학교","부경대","부산","국립",3],["한국해양대학교","한국해양대","부산","국립",3],["동의대학교","동의대","부산","사립",4],["동서대학교","동서대","부산","사립",4],["경성대학교","경성대","부산","사립",4],["고신대학교","고신대","부산","사립",4],["신라대학교","신라대","부산","사립",4],["제주대학교","제주대","제주","국립",4],
 ];
 
@@ -168,6 +198,7 @@ const shortNameFromSchool = name => {
   return name.replace(/대학교|대학|캠퍼스/g, "대").replace(/\s+/g, " ").trim();
 };
 const deptSetForSchool = (name, tier) => {
+  if (SPECIAL_UNIVERSITY_PROFILES[name]?.depts) return SPECIAL_UNIVERSITY_PROFILES[name].depts;
   const list = [...DEPT_PRESETS.engineering, ...DEPT_PRESETS.common, ...DEPT_PRESETS.science];
   if (tier <= 2 || /의과|의학|가톨릭|한림|인제|원광|고신|차의과학|한의/.test(name)) list.push(...DEPT_PRESETS.medical);
   if (/교원|교육|사범|공주|경인|춘천|청주|서원/.test(name)) list.push(...DEPT_PRESETS.education);
@@ -192,6 +223,7 @@ const makeUniversityRecord = ([name, short, region, type, tier], index = 0, sour
   tier: normalizeTier(tier),
   color: UNIVERSITY_COLORS[index % UNIVERSITY_COLORS.length],
   depts: deptSetForSchool(name, normalizeTier(tier)),
+  keywords: SPECIAL_UNIVERSITY_PROFILES[name]?.keywords || [],
   tracks: generatedTracks(normalizeTier(tier), index),
   source,
 });
@@ -216,6 +248,7 @@ const mergeUniversityCatalog = rows => {
       id: existing.id,
       color: existing.color,
       depts: [...new Set([...(existing.depts || []), ...(row.depts || [])])],
+      keywords: [...new Set([...(existing.keywords || []), ...(row.keywords || [])])],
       tracks: existing.tracks?.length ? existing.tracks : row.tracks,
     });
   });
@@ -247,10 +280,27 @@ const careerNetMajorToOption = item => {
   };
 };
 const mergeDepartmentOptions = (base = [], apiMajors = []) => {
-  const apiNames = apiMajors.map(major => major.name).filter(Boolean);
+  const apiNames = apiMajors.map(major => typeof major === "string" ? major : major.name).filter(Boolean);
   return [...new Set([...base, ...apiNames])].sort((a, b) => a.localeCompare(b, "ko"));
 };
-const departmentOptionsForUniversity = (univ, apiMajors = []) => mergeDepartmentOptions(univ?.depts || [], apiMajors);
+const majorMatchesUniversity = (major, univ) => {
+  if (!univ) return false;
+  const terms = [...(univ.keywords || []), ...(univ.depts || [])].filter(Boolean);
+  if (!terms.length) return false;
+  const haystack = `${major.name || ""} ${major.field || ""} ${(major.aliases || []).join(" ")}`.toLowerCase();
+  return terms.some(term => {
+    const clean = String(term).replace(/학부|학과|전공|과정/g, "").trim().toLowerCase();
+    return clean.length >= 2 && haystack.includes(clean);
+  });
+};
+const departmentOptionsForUniversity = (univ, apiMajors = []) => {
+  const base = univ?.depts || [];
+  const matchedMajors = apiMajors
+    .filter(major => majorMatchesUniversity(major, univ))
+    .map(major => major.name)
+    .filter(Boolean);
+  return mergeDepartmentOptions(base, matchedMajors);
+};
 async function fetchCareerNetPaged(baseParams, mapper, maxPages = 6) {
   if (!CAREERNET_API_KEY) return [];
   const all = [];
@@ -275,14 +325,32 @@ async function fetchCareerNetPaged(baseParams, mapper, maxPages = 6) {
   }
   return all;
 }
-const loadCareerNetUniversities = () => fetchCareerNetPaged(
-  { svcCode:"SCHOOL", gubun:"univ_list" },
-  careerNetSchoolToUniversity,
-);
-const loadCareerNetMajors = () => fetchCareerNetPaged(
-  { svcCode:"MAJOR", gubun:"univ_list" },
-  careerNetMajorToOption,
-);
+const loadCareerNetUniversities = async () => {
+  const universities = await fetchCareerNetPaged(
+    { svcCode:"SCHOOL", gubun:"대학교" },
+    careerNetSchoolToUniversity,
+    10,
+  );
+  if (universities.length) return universities;
+  return fetchCareerNetPaged(
+    { svcCode:"SCHOOL", gubun:"univ_list" },
+    careerNetSchoolToUniversity,
+    10,
+  );
+};
+const loadCareerNetMajors = async () => {
+  const majors = await fetchCareerNetPaged(
+    { svcCode:"MAJOR", gubun:"대학교" },
+    careerNetMajorToOption,
+    10,
+  );
+  if (majors.length) return majors;
+  return fetchCareerNetPaged(
+    { svcCode:"MAJOR", gubun:"univ_list" },
+    careerNetMajorToOption,
+    10,
+  );
+};
 async function loadCareerNetTests() {
   if (!CAREERNET_API_KEY) return [];
   const params = new URLSearchParams({ apikey: CAREERNET_API_KEY });
@@ -312,7 +380,7 @@ const departmentFilterMatches = (univ, filterKey) => {
   if (filterKey === "all") return true;
   const filter = DEPARTMENT_FILTERS.find(item => item.key === filterKey);
   if (!filter) return true;
-  const haystack = `${univ.name} ${(univ.depts || []).join(" ")}`.toLowerCase();
+  const haystack = `${univ.name} ${univ.short || ""} ${(univ.depts || []).join(" ")} ${(univ.keywords || []).join(" ")}`.toLowerCase();
   return filter.terms.some(term => haystack.includes(term.toLowerCase()));
 };
 const rankScore = (univ, rankFilter, departmentFilter) => {
@@ -878,7 +946,7 @@ const buildSusiCards = (user, profile, catalog, avgValue) => {
   const preferred = [...(profile?.targets || [])];
   const fallback = (catalog || [])
     .filter(univ => departmentFilterMatches(univ, "all"))
-    .filter(univ => !major || `${univ.name} ${(univ.depts || []).join(" ")}`.includes(major.replace(/학부|학과/g, "")) || departmentFilterMatches(univ, DEPARTMENT_FILTERS.find(f => f.terms.some(term => major.includes(term)))?.key || "all"))
+    .filter(univ => !major || `${univ.name} ${(univ.depts || []).join(" ")} ${(univ.keywords || []).join(" ")}`.includes(major.replace(/학부|학과/g, "")) || departmentFilterMatches(univ, DEPARTMENT_FILTERS.find(f => f.terms.some(term => major.includes(term)))?.key || "all"))
     .sort((a, b) => rankScore(a, "susi", "all") - rankScore(b, "susi", "all"))
     .slice(0, 18);
   const candidates = [...preferred, ...fallback]
@@ -3086,8 +3154,10 @@ export default function App() {
   const filtered = universityCatalog
     .filter(u => {
       const q = query.trim().toLowerCase();
-      const searchable = `${u.name} ${u.short} ${u.region} ${u.type} ${(u.depts || []).join(" ")}`.toLowerCase();
-      return (!q || searchable.includes(q))
+      const searchable = `${u.name} ${u.short} ${u.region} ${u.type} ${(u.depts || []).join(" ")} ${(u.keywords || []).join(" ")}`.toLowerCase();
+      const compactSearchable = searchable.replace(/\s+/g, "");
+      const compactQuery = q.replace(/\s+/g, "");
+      return (!q || searchable.includes(q) || compactSearchable.includes(compactQuery))
         && (regionFilter === "all" || u.region === regionFilter)
         && departmentFilterMatches(u, departmentFilter);
     })
@@ -4709,6 +4779,9 @@ export default function App() {
                     <div style={{ flex:1 }}>
                       <div className="rname">{u.name}</div>
                       <div className="rmeta">{u.region} · {u.type} · {TIER_LABEL[u.tier]}권</div>
+                      {(u.depts || []).length > 0 && (
+                        <div className="rmeta">{u.depts.slice(0, 5).join(" · ")}</div>
+                      )}
                     </div>
                     <button className={`abtn ${isAdded(u.id)?"done":"add"}`}
                       onClick={e => { e.stopPropagation(); addUniv(u); }}>
