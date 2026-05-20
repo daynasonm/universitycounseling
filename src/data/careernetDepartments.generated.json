@@ -1,6 +1,6 @@
 {
   "_meta": {
-    "generatedAt": "2026-05-20T06:21:24.243Z",
+    "generatedAt": "2026-05-20T06:30:21.340Z",
     "majorCount": 501,
     "schoolKeyCount": 870
   },
@@ -7441,7 +7441,7 @@
   },
   "공군사관학교": {
     "status": "ready",
-    "source": "careernet",
+    "source": "manual",
     "departments": [
       "국방경영학",
       "국제관계학",
