@@ -377,6 +377,10 @@ UNIVS.push(...NATIONAL_UNIVERSITY_ROWS.map((row, index) => makeUniversityRecord(
 const SUBJECTS = ["국어","수학","영어","한국사","사회","과학","체육","음악","미술"];
 const CORE = ["국어","수학","영어"];
 const SEMS = ["고1-1","고1-2","고2-1","고2-2","고3-1"];
+const EXAM_SCORE_TYPES = [
+  { key:"midterm", label:"중간" },
+  { key:"final", label:"기말" },
+];
 const LINE_COLORS = {"국어":"#E74C3C","수학":"#1B3A6B","영어":"#27AE60","사회":"#8B6914","과학":"#2980B9"};
 const TIER_LABEL = {1:"최상위",2:"상위",3:"중상위",4:"지역중심"};
 const LAST_ADMISSION_YEAR = 2025;
@@ -814,11 +818,86 @@ const mergeCareerTests = apiTests => {
 
 const getSetechGuide = major => SETECH_GUIDES[getDepartmentField(major)] || SETECH_GUIDES["일반계열"];
 
+const gradeKey = (subject, semester) => `${subject}-${semester}`;
+const examScoreKey = (subject, semester, scoreType) => `${subject}-${semester}-${scoreType}`;
+const parseGradeKey = key => {
+  for (const subject of SUBJECTS) {
+    for (const semester of SEMS) {
+      if (key === gradeKey(subject, semester)) return { subject, semester };
+    }
+  }
+  return null;
+};
+const countGradeEntries = gradeMap => Object.keys(gradeMap || {}).filter(key => parseGradeKey(key)).length;
+const gradeEntryValue = (gradeMap, subject, semester) => gradeMap?.[gradeKey(subject, semester)] ?? "";
+const examScoreValue = (gradeMap, subject, semester, scoreType) => gradeMap?.[examScoreKey(subject, semester, scoreType)] ?? "";
+const clampStudentGrade = value => Math.max(1, Math.min(9, Number(value)));
+const clampExamScore = value => Math.max(0, Math.min(100, Number(value)));
+const updateGradeEntry = (gradeMap, subject, semester, value) => {
+  const next = { ...(gradeMap || {}) };
+  const key = gradeKey(subject, semester);
+  const number = parseFloat(value);
+  if (value === "" || Number.isNaN(number)) delete next[key];
+  else next[key] = clampStudentGrade(number);
+  return next;
+};
+const updateExamScoreEntry = (gradeMap, subject, semester, scoreType, value) => {
+  const next = { ...(gradeMap || {}) };
+  const key = examScoreKey(subject, semester, scoreType);
+  const number = parseFloat(value);
+  if (value === "" || Number.isNaN(number)) delete next[key];
+  else next[key] = clampExamScore(number);
+  return next;
+};
+const scoreAverageForGradeCell = (gradeMap, subject, semester) => {
+  const values = EXAM_SCORE_TYPES
+    .map(type => examScoreValue(gradeMap, subject, semester, type.key))
+    .filter(value => value !== "" && value !== undefined && !Number.isNaN(+value))
+    .map(Number);
+  if (!values.length) return null;
+  return values.reduce((sum, value) => sum + value, 0) / values.length;
+};
+const expectedGradeFromScoreAverage = score => {
+  if (score >= 96) return 1;
+  if (score >= 90) return 2;
+  if (score >= 80) return 3;
+  if (score >= 70) return 4;
+  if (score >= 60) return 5;
+  if (score >= 50) return 6;
+  if (score >= 40) return 7;
+  if (score >= 30) return 8;
+  return 9;
+};
+const gradeInflationWarningsForGrades = gradeMap => {
+  const warnings = [];
+  SUBJECTS.forEach(subject => {
+    SEMS.forEach(semester => {
+      const grade = gradeEntryValue(gradeMap, subject, semester);
+      const scoreAverage = scoreAverageForGradeCell(gradeMap, subject, semester);
+      if (grade === "" || scoreAverage === null) return;
+      const expectedGrade = expectedGradeFromScoreAverage(scoreAverage);
+      const gap = Number(grade) - expectedGrade;
+      if ((scoreAverage >= 90 && gap >= 1.5) || (scoreAverage >= 85 && gap >= 2)) {
+        warnings.push({
+          id: `${subject}-${semester}`,
+          subject,
+          semester,
+          scoreAverage,
+          grade: Number(grade),
+          expectedGrade,
+        });
+      }
+    });
+  });
+  return warnings;
+};
+
 const gradeValuesForProfile = profile => Object.entries(profile?.grades || {})
   .map(([key, value]) => {
-    const [subject, semester] = key.split("-");
-    return { subject, semester, value:+value };
+    const parsed = parseGradeKey(key);
+    return parsed ? { ...parsed, value:+value } : null;
   })
+  .filter(Boolean)
   .filter(item => !Number.isNaN(item.value));
 
 const getLatestSemester = profile => {
@@ -862,7 +941,7 @@ const buildMidtermDiagnosis = (profile, major) => {
         ? "상승 전략 필요"
         : "집중 관리";
   const actions = [];
-  if (!avgValue) actions.push("최근 중간고사 과목별 등급을 먼저 입력하세요.");
+  if (!avgValue) actions.push("최근 학기 과목별 등급을 먼저 입력하세요.");
   if (weakSubjects[0]) actions.push(`${weakSubjects[0].subject} 등급을 가장 먼저 보완하고, 오답 원인을 유형별로 나누세요.`);
   actions.push(`${guide.coreSubjects[0]} 과목에서 희망 학과와 연결되는 수행평가/발표 소재를 1개 확보하세요.`);
   actions.push("중간고사 이후 2주 안에 수행평가 결과물과 탐구 질문을 생활기록부 원문에 정리하세요.");
@@ -1419,15 +1498,15 @@ const formatDateLabel = value => {
 const coreAvgForGrades = gradeMap => {
   const vals = [];
   SEMS.forEach(m => CORE.forEach(s => {
-    const g = gradeMap[`${s}-${m}`];
-    if (g !== undefined) vals.push(+g);
+    const g = gradeMap[gradeKey(s, m)];
+    if (g !== undefined && !Number.isNaN(+g)) vals.push(+g);
   }));
   if (!vals.length) return null;
   return (vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(2);
 };
 
 const semAvgForGrades = (gradeMap, semester) => {
-  const vals = CORE.map(s => gradeMap[`${s}-${semester}`]).filter(v => v !== undefined);
+  const vals = CORE.map(s => gradeMap[gradeKey(s, semester)]).filter(v => v !== undefined && !Number.isNaN(+v));
   if (!vals.length) return null;
   return (vals.reduce((a, b) => a + +b, 0) / vals.length).toFixed(1);
 };
@@ -1537,6 +1616,18 @@ select:focus{border-color:#0EA5E9;}
 .gtable td:first-child{text-align:left;}
 .gtable tr:last-child td{border-bottom:none;}
 .gtable tr:nth-child(even){background:#FAFAFA;}
+.grade-entry-table{min-width:1180px;}
+.grade-entry-table th.semester-group{background:#F8FAFC;color:#4B5563;font-weight:800;border-left:1px solid #EEF2F7;}
+.grade-entry-table th.grade-subhead{font-size:10.5px;font-weight:800;color:#9AA6B2;background:#FCFCFD;}
+.grade-entry-table .grade-required-head{color:#0EA5E9;}
+.grade-entry-table input{width:68px;border:1px solid #E1E7EF;border-radius:10px;background:#fff;padding:8px 7px;text-align:center;font-size:12.5px;font-weight:800;color:#202632;font-family:'Noto Sans KR',sans-serif;outline:none;}
+.grade-entry-table input:focus{border-color:#0EA5E9;box-shadow:0 0 0 3px rgba(14,165,233,0.08);}
+.grade-entry-table input.grade-required{background:#F8FBFF;border-color:#BFDBFE;}
+.grade-entry-table .subject-cell{position:sticky;left:0;background:inherit;z-index:1;min-width:76px;}
+.grade-warning-panel{border:1px solid #FDE68A;border-radius:14px;background:#FFFBEB;color:#92400E;padding:12px 14px;margin:0 0 14px;}
+.grade-warning-title{font-size:13px;font-weight:900;margin-bottom:6px;}
+.grade-warning-list{display:grid;gap:5px;}
+.grade-warning-item{font-size:12.5px;line-height:1.55;font-weight:700;}
 .sn{display:flex;align-items:center;gap:7px;font-size:13.5px;}
 .avrow{display:flex;gap:10px;margin-bottom:20px;}
 .avbox{flex:1;background:#fff;border:1px solid #E5EAF1;border-radius:10px;padding:12px 8px;text-align:center;}
@@ -1678,6 +1769,8 @@ select:focus{border-color:#0EA5E9;}
 .grade-matrix td:first-child{text-align:left;font-weight:600;}
 .grade-mini-input{width:62px;border:1px solid #E1E7EF;border-radius:10px;background:#fff;padding:7px 6px;text-align:center;font-size:12.5px;font-weight:800;color:#202632;font-family:'Noto Sans KR',sans-serif;outline:none;}
 .grade-mini-input:focus{border-color:#0EA5E9;box-shadow:0 0 0 3px rgba(14,165,233,0.08);}
+.grade-mini-input.score-input{width:58px;font-weight:700;color:#4B5563;}
+.grade-mini-input.grade-required{background:#F8FBFF;border-color:#BFDBFE;color:#0B1324;}
 .record-block{padding:12px 0;border-bottom:1px solid #EEF2F7;}
 .record-block:last-child{border-bottom:none;padding-bottom:0;}
 .record-text-card{display:grid;gap:12px;}
@@ -3014,12 +3107,13 @@ export default function App() {
   const profileChartData = profileStudent ? SEMS.map(m => {
     const e = { semester: m };
     Object.keys(LINE_COLORS).forEach(s => {
-      const g = profileStudent.profile.grades?.[`${s}-${m}`];
-      if (g !== undefined) e[s] = +g;
+      const g = gradeEntryValue(profileStudent.profile.grades, s, m);
+      if (g !== "") e[s] = +g;
     });
     return e;
   }) : [];
   const profileHasGrades = profileChartData.some(d => Object.keys(d).length > 1);
+  const profileGradeWarnings = profileStudent ? gradeInflationWarningsForGrades(profileStudent.profile.grades || {}) : [];
   const allStudents = allStudentRows.map(row => row.user);
   const studentsWithTargets = allStudentRows.filter(row => (row.profile.targets || []).length > 0);
   const studentsWithGrades = allStudentRows.filter(row => row.avgValue);
@@ -3166,20 +3260,20 @@ export default function App() {
     setAssignmentDropTarget(null);
   };
 
-  const getG = (s, m) => grades[`${s}-${m}`] ?? "";
-  const setG = (s, m, v) => {
-    const n = parseFloat(v);
-    setGrades(p => { const nx = { ...p }, k = `${s}-${m}`; if (v === "" || isNaN(n)) delete nx[k]; else nx[k] = Math.min(9, Math.max(1, n)); return nx; });
-  };
+  const getG = (s, m) => gradeEntryValue(grades, s, m);
+  const setG = (s, m, v) => setGrades(p => updateGradeEntry(p, s, m, v));
+  const getExamScore = (s, m, type) => examScoreValue(grades, s, m, type);
+  const setExamScore = (s, m, type, v) => setGrades(p => updateExamScoreEntry(p, s, m, type, v));
 
   const coreAvg = () => coreAvgForGrades(grades);
   const semAvg = m => semAvgForGrades(grades, m);
 
   const getMatch = univ => getMatchForAvg(univ, coreAvg());
 
-  const chartData = SEMS.map(m => { const e = { semester: m }; Object.keys(LINE_COLORS).forEach(s => { const g = grades[`${s}-${m}`]; if (g !== undefined) e[s] = +g; }); return e; });
+  const chartData = SEMS.map(m => { const e = { semester: m }; Object.keys(LINE_COLORS).forEach(s => { const g = gradeEntryValue(grades, s, m); if (g !== "") e[s] = +g; }); return e; });
   const hasGrades = chartData.some(d => Object.keys(d).length > 1);
   const avg = coreAvg();
+  const gradeWarnings = gradeInflationWarningsForGrades(grades);
   const matchSel = sel ? getMatch(sel) : null;
   const selectedDepartmentOptions = sel ? departmentOptionsForUniversity(sel, apiMajors, selectedDepartmentRecord?.departments || []) : [];
   const selectedDept = sel && selectedDepartmentOptions.length
@@ -3237,13 +3331,14 @@ export default function App() {
   };
 
   const setProfileGrade = (subject, semester, value) => {
-    const n = parseFloat(value);
     updateProfileStudentProfile(profile => {
-      const nextGrades = { ...(profile.grades || {}) };
-      const key = `${subject}-${semester}`;
-      if (value === "" || isNaN(n)) delete nextGrades[key];
-      else nextGrades[key] = Math.min(9, Math.max(1, n));
-      return { ...profile, grades: nextGrades };
+      return { ...profile, grades: updateGradeEntry(profile.grades || {}, subject, semester, value) };
+    });
+  };
+
+  const setProfileExamScore = (subject, semester, scoreType, value) => {
+    updateProfileStudentProfile(profile => {
+      return { ...profile, grades: updateExamScoreEntry(profile.grades || {}, subject, semester, scoreType, value) };
     });
   };
 
@@ -3953,7 +4048,7 @@ export default function App() {
 
                 <div className="cstats">
                   <div className="cstat"><div className="cstat-label">목표 대학</div><div className="cstat-value">{profileStudent.profile.targets?.length || 0}</div></div>
-                  <div className="cstat"><div className="cstat-label">입력 과목수</div><div className="cstat-value">{Object.keys(profileStudent.profile.grades || {}).length}</div></div>
+                  <div className="cstat"><div className="cstat-label">등급 입력</div><div className="cstat-value">{countGradeEntries(profileStudent.profile.grades || {})}</div></div>
                   <div className="cstat"><div className="cstat-label">생활기록부</div><div className="cstat-value">{profileStudent.profile.gibpu ? "O" : "-"}</div></div>
                       <div className="cstat"><div className="cstat-label">대표 상태</div><div className="cstat-value">{profileStudent.match?.label || "대기"}</div></div>
                 </div>
@@ -4310,12 +4405,34 @@ export default function App() {
 
                     <section className="profile-section">
                       <div className="secl">전체 성적표</div>
+                      <div className="mini-body" style={{ marginBottom:12 }}>등급은 필수 기준입니다. 중간/기말 원점수는 기억나는 경우만 입력합니다.</div>
+                      {!!profileGradeWarnings.length && (
+                        <div className="grade-warning-panel">
+                          <div className="grade-warning-title">원점수 대비 등급 차이 확인</div>
+                          <div className="grade-warning-list">
+                            {profileGradeWarnings.slice(0, 5).map(item => (
+                              <div key={item.id} className="grade-warning-item">
+                                {item.semester} {item.subject}: 원점수 평균 {item.scoreAverage.toFixed(1)}점 / {item.grade.toFixed(1)}등급. 시험 난도나 동점자 분포로 내신 인플레 가능성을 확인하세요.
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                       <div style={{ overflowX:"auto" }}>
-                        <table className="grade-matrix">
+                        <table className="grade-matrix grade-entry-table">
                           <thead>
                             <tr>
-                              <th>과목</th>
-                              {SEMS.map(m => <th key={m}>{m}</th>)}
+                              <th rowSpan="2">과목</th>
+                              {SEMS.map(m => <th key={m} colSpan="3" className="semester-group">{m}</th>)}
+                            </tr>
+                            <tr>
+                              {SEMS.map(m => (
+                                <React.Fragment key={m}>
+                                  <th className="grade-subhead">중간</th>
+                                  <th className="grade-subhead">기말</th>
+                                  <th className="grade-subhead grade-required-head">등급</th>
+                                </React.Fragment>
+                              ))}
                             </tr>
                           </thead>
                           <tbody>
@@ -4323,18 +4440,48 @@ export default function App() {
                               <tr key={subject}>
                                 <td>{subject}</td>
                                 {SEMS.map(m => (
-                                  <td key={m}>
-                                    <input
-                                      className="grade-mini-input"
-                                      type="number"
-                                      min="1"
-                                      max="9"
-                                      step="0.1"
-                                      value={profileStudent.profile.grades?.[`${subject}-${m}`] ?? ""}
-                                      onChange={e => setProfileGrade(subject, m, e.target.value)}
-                                      aria-label={`${subject} ${m} 등급`}
-                                    />
-                                  </td>
+                                  <React.Fragment key={m}>
+                                    <td>
+                                      <input
+                                        className="grade-mini-input score-input"
+                                        type="number"
+                                        min="0"
+                                        max="100"
+                                        step="1"
+                                        placeholder="선택"
+                                        value={examScoreValue(profileStudent.profile.grades, subject, m, "midterm")}
+                                        onChange={e => setProfileExamScore(subject, m, "midterm", e.target.value)}
+                                        aria-label={`${subject} ${m} 중간고사 원점수`}
+                                      />
+                                    </td>
+                                    <td>
+                                      <input
+                                        className="grade-mini-input score-input"
+                                        type="number"
+                                        min="0"
+                                        max="100"
+                                        step="1"
+                                        placeholder="선택"
+                                        value={examScoreValue(profileStudent.profile.grades, subject, m, "final")}
+                                        onChange={e => setProfileExamScore(subject, m, "final", e.target.value)}
+                                        aria-label={`${subject} ${m} 기말고사 원점수`}
+                                      />
+                                    </td>
+                                    <td>
+                                      <input
+                                        className="grade-mini-input grade-required"
+                                        type="number"
+                                        min="1"
+                                        max="9"
+                                        step="0.1"
+                                        placeholder="필수"
+                                        required
+                                        value={gradeEntryValue(profileStudent.profile.grades, subject, m)}
+                                        onChange={e => setProfileGrade(subject, m, e.target.value)}
+                                        aria-label={`${subject} ${m} 등급`}
+                                      />
+                                    </td>
+                                  </React.Fragment>
                                 ))}
                               </tr>
                             ))}
@@ -4987,8 +5134,20 @@ export default function App() {
           {/* 성적표 */}
           {section === "성적표" && <>
             <div className="ptitle">성적표</div>
-            <div className="psub">석차등급(1~9등급)을 입력하세요. 낮을수록 우수합니다.</div>
+            <div className="psub">각 학기별 중간고사·기말고사 원점수와 석차등급을 관리합니다. 원점수는 선택 입력이고, 등급은 전략 분석의 필수 기준입니다.</div>
             {avg && <div style={{ display:"inline-flex", alignItems:"center", gap:8, padding:"9px 16px", borderRadius:10, background:"#EAF2FF", marginBottom:16 }}><span style={{ fontSize:13, color:"#0EA5E9", fontWeight:500 }}>📊 국·수·영 전체 평균: {(+avg).toFixed(1)}등급</span></div>}
+            {!!gradeWarnings.length && (
+              <div className="grade-warning-panel">
+                <div className="grade-warning-title">원점수 대비 등급 차이 확인</div>
+                <div className="grade-warning-list">
+                  {gradeWarnings.slice(0, 6).map(item => (
+                    <div key={item.id} className="grade-warning-item">
+                      {item.semester} {item.subject}: 원점수 평균 {item.scoreAverage.toFixed(1)}점 / {item.grade.toFixed(1)}등급. 시험 난도나 동점자 분포로 내신 인플레 가능성을 확인하세요.
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
             {avg && (
               <div className="avrow">
                 {SEMS.map(m => { const a = semAvg(m); return a ? (
@@ -5001,16 +5160,33 @@ export default function App() {
               </div>
             )}
             <div className="card" style={{ overflowX:"auto" }}>
-              <table className="gtable">
-                <thead><tr>
-                  <th style={{ width:76 }}>과목</th>
-                  {SEMS.map(m => <th key={m}>{m}</th>)}
-                </tr></thead>
+              <table className="gtable grade-entry-table">
+                <thead>
+                  <tr>
+                    <th rowSpan="2" style={{ width:76 }}>과목</th>
+                    {SEMS.map(m => <th key={m} colSpan="3" className="semester-group">{m}</th>)}
+                  </tr>
+                  <tr>
+                    {SEMS.map(m => (
+                      <React.Fragment key={m}>
+                        <th className="grade-subhead">중간</th>
+                        <th className="grade-subhead">기말</th>
+                        <th className="grade-subhead grade-required-head">등급</th>
+                      </React.Fragment>
+                    ))}
+                  </tr>
+                </thead>
                 <tbody>
                   {SUBJECTS.map(s => (
                     <tr key={s}>
-                      <td><div className="sn">{LINE_COLORS[s] && <span className="dot" style={{ background:LINE_COLORS[s], width:7, height:7 }} />}<span style={{ fontWeight:CORE.includes(s)?600:400 }}>{s}</span></div></td>
-                      {SEMS.map(m => <td key={m}><input type="number" min="1" max="9" step="0.1" value={getG(s,m)} placeholder="—" onChange={e => setG(s,m,e.target.value)} /></td>)}
+                      <td className="subject-cell"><div className="sn">{LINE_COLORS[s] && <span className="dot" style={{ background:LINE_COLORS[s], width:7, height:7 }} />}<span style={{ fontWeight:CORE.includes(s)?600:400 }}>{s}</span></div></td>
+                      {SEMS.map(m => (
+                        <React.Fragment key={m}>
+                          <td><input type="number" min="0" max="100" step="1" value={getExamScore(s,m,"midterm")} placeholder="선택" onChange={e => setExamScore(s,m,"midterm",e.target.value)} aria-label={`${s} ${m} 중간고사 원점수`} /></td>
+                          <td><input type="number" min="0" max="100" step="1" value={getExamScore(s,m,"final")} placeholder="선택" onChange={e => setExamScore(s,m,"final",e.target.value)} aria-label={`${s} ${m} 기말고사 원점수`} /></td>
+                          <td><input className="grade-required" type="number" min="1" max="9" step="0.1" value={getG(s,m)} placeholder="필수" required onChange={e => setG(s,m,e.target.value)} aria-label={`${s} ${m} 등급`} /></td>
+                        </React.Fragment>
+                      ))}
                     </tr>
                   ))}
                 </tbody>
