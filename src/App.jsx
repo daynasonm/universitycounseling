@@ -2325,7 +2325,7 @@ export default function App() {
   const [backendReady, setBackendReady] = useState(!supabaseEnabled);
   const [backendError, setBackendError] = useState("");
   const [authMode, setAuthMode] = useState("login");
-  const [authForm, setAuthForm] = useState({ name:"", email:"", password:"", role:"student", gradeLevel:"3학년", className:"3-1", highSchool:"", preferredMajor:"", counselorCode:"", classJoinCode:"" });
+  const [authForm, setAuthForm] = useState({ name:"", email:"", password:"", role:"student", gradeLevel:"3학년", className:"3-1", highSchool:"", preferredMajor:"", counselorCode:"" });
   const [authError, setAuthError] = useState("");
   const [authNotice, setAuthNotice] = useState("");
   const [showResendConfirmation, setShowResendConfirmation] = useState(false);
@@ -2519,7 +2519,7 @@ export default function App() {
   const startSession = user => {
     setCurrentUserId(user.id);
     if (!supabaseEnabled) writeJson(SESSION_KEY, user.id);
-    setAuthForm({ name:"", email:"", password:"", role:"student", gradeLevel:"3학년", className:"3-1", highSchool:"", preferredMajor:"", counselorCode:"", classJoinCode:"" });
+    setAuthForm({ name:"", email:"", password:"", role:"student", gradeLevel:"3학년", className:"3-1", highSchool:"", preferredMajor:"", counselorCode:"" });
     setAuthError("");
     setAuthNotice("");
     setShowResendConfirmation(false);
@@ -2616,31 +2616,6 @@ export default function App() {
       return;
     }
 
-    const pendingClassCode = authForm.role === "student" ? normalizeInviteCode(authForm.classJoinCode) : "";
-    const pendingClass = pendingClassCode
-      ? counselorClasses.find(item => normalizeInviteCode(item.joinCode) === pendingClassCode)
-      : null;
-    if (pendingClassCode && !pendingClass) {
-      setAuthError("상담사 코드가 올바르지 않습니다.");
-      return;
-    }
-    if (pendingClass && pendingClass.isActive === false) {
-      setAuthError("현재 비활성화된 상담사 코드입니다.");
-      return;
-    }
-    if (pendingClass) {
-      const memberCount = classMemberships.filter(item => item.classId === pendingClass.id).length;
-      if (memberCount >= (pendingClass.maxStudents || 100)) {
-        setAuthError("이 상담사의 학생 정원이 가득 찼습니다.");
-        return;
-      }
-    }
-    const pendingCounselor = pendingClass ? users.find(user => user.id === pendingClass.counselorId) : null;
-    if (pendingClass && pendingCounselor?.isActive === false) {
-      setAuthError("현재 비활성화된 상담사 계정입니다.");
-      return;
-    }
-
     const user = {
       id: createId(authForm.role),
       name: authForm.name.trim(),
@@ -2661,14 +2636,6 @@ export default function App() {
       const nextProfiles = { ...profiles, [user.id]: createProfile() };
       setProfiles(nextProfiles);
       writeJson(PROFILES_KEY, nextProfiles);
-      if (pendingClass) {
-        const nextMemberships = [
-          ...classMemberships.filter(item => item.studentId !== user.id),
-          { studentId:user.id, classId:pendingClass.id, joinedAt:new Date().toISOString() },
-        ];
-        setClassMemberships(nextMemberships);
-        writeJson(MEMBERSHIPS_KEY, nextMemberships);
-      }
     }
 
     startSession(user);
@@ -3567,17 +3534,6 @@ export default function App() {
                           <label htmlFor="auth-class">반</label>
 	                          <input id="auth-class" className="auth-input" value={authForm.className} onChange={e => setAuthValue("className", e.target.value)} placeholder="예: 3-1" />
 	                        </div>
-	                      </div>
-	                      <div className="field">
-	                        <label htmlFor="auth-class-code">상담사 코드</label>
-	                        <input
-	                          id="auth-class-code"
-	                          className="auth-input"
-	                          value={authForm.classJoinCode}
-	                          onChange={e => setAuthValue("classJoinCode", e.target.value)}
-	                          placeholder="상담사에게 받은 학생용 코드"
-	                          autoComplete="off"
-	                        />
 	                      </div>
 	                    </>
 	                  )}

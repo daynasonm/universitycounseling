@@ -251,4 +251,70 @@ begin
 end;
 $$;
 
+create or replace function public.join_class_by_code(invite_code text)
+returns public.counselor_classes
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  clean_code text := public.normalize_class_code(invite_code);
+  user_role text;
+  target_class public.counselor_classes;
+  member_count integer := 0;
+begin
+  select role
+    into user_role
+    from public.app_users
+   where id = auth.uid();
+
+  if user_role <> 'student' then
+    raise exception '학생 계정만 반에 입장할 수 있습니다.';
+  end if;
+
+  select *
+    into target_class
+    from public.counselor_classes
+   where join_code = clean_code;
+
+  if target_class.id is null then
+    raise exception '상담사 코드를 찾을 수 없습니다.';
+  end if;
+
+  if target_class.is_active = false then
+    raise exception '현재 비활성화된 상담사 코드입니다.';
+  end if;
+
+  if not exists (
+    select 1
+      from public.app_users
+     where id = target_class.counselor_id
+       and role = 'counselor'
+       and is_active = true
+  ) then
+    raise exception '현재 비활성화된 상담사 계정입니다.';
+  end if;
+
+  select count(*)
+    into member_count
+    from public.class_memberships
+   where class_id = target_class.id
+     and student_id <> auth.uid();
+
+  if member_count >= target_class.max_students then
+    raise exception '이 상담사의 학생 정원이 가득 찼습니다.';
+  end if;
+
+  insert into public.class_memberships (student_id, class_id)
+  values (auth.uid(), target_class.id)
+  on conflict (student_id) do update set
+    class_id = excluded.class_id,
+    joined_at = now();
+
+  return target_class;
+end;
+$$;
+
+grant execute on function public.join_class_by_code(text) to authenticated;
+
 notify pgrst, 'reload schema';

@@ -223,7 +223,6 @@ export const signUpBackend = async form => {
     class_name: role === "student" ? form.className?.trim() || "미배정" : null,
     high_school: role === "student" ? form.highSchool?.trim() : null,
     preferred_major: role === "student" ? form.preferredMajor?.trim() : null,
-    class_invite_code: role === "student" ? form.classJoinCode?.trim() || null : null,
   };
   const { data, error } = await supabase.auth.signUp({
     email,
