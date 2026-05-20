@@ -15,6 +15,11 @@ export const supabase = supabaseEnabled
     })
   : null;
 
+const getEmailRedirectTo = () => {
+  if (typeof window === "undefined") return undefined;
+  return new URL(import.meta.env.BASE_URL || "/", window.location.origin).toString();
+};
+
 const mapAppUser = row => ({
   id: row.id,
   name: row.name || row.email?.split("@")[0] || "사용자",
@@ -223,7 +228,10 @@ export const signUpBackend = async form => {
   const { data, error } = await supabase.auth.signUp({
     email,
     password: form.password.trim(),
-    options: { data: metadata },
+    options: {
+      data: metadata,
+      emailRedirectTo: getEmailRedirectTo(),
+    },
   });
   if (error) throw error;
   if (!data.session) return { needsEmailConfirmation: true };
@@ -235,6 +243,9 @@ export const resendConfirmationBackend = async email => {
   const { error } = await supabase.auth.resend({
     type: "signup",
     email: email.trim().toLowerCase(),
+    options: {
+      emailRedirectTo: getEmailRedirectTo(),
+    },
   });
   if (error) throw error;
 };

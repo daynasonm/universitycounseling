@@ -2829,13 +2829,13 @@ export default function App() {
 
   const changeUserRole = async (targetUser, nextRole) => {
     if (!currentUser || currentUser.role !== "admin" || !targetUser || targetUser.role === nextRole) return;
-    if (!["student", "counselor"].includes(nextRole)) return;
+    if (nextRole !== "counselor") return;
 
     if (supabaseEnabled) {
       try {
         const state = await setBackendUserRole({ userId:targetUser.id, role:nextRole, isActive:true });
         applyBackendState(state);
-        setAdminNotice(`${targetUser.name} 계정을 ${nextRole === "counselor" ? "상담사" : "학생"}로 변경했습니다.`);
+        setAdminNotice(`${targetUser.name} 계정을 상담사로 변경했습니다.`);
       } catch (error) {
         setAdminNotice(error.message || "역할 변경에 실패했습니다.");
       }
@@ -2847,37 +2847,18 @@ export default function App() {
       writeJson(USERS_KEY, next);
       return next;
     });
-    if (nextRole === "student") {
-      setProfiles(prev => {
-        const next = { ...prev, [targetUser.id]: prev[targetUser.id] || createProfile() };
-        writeJson(PROFILES_KEY, next);
-        return next;
-      });
-      setCounselorClasses(prev => {
-        const removedClassIds = new Set(prev.filter(item => item.counselorId === targetUser.id).map(item => item.id));
-        const next = prev.filter(item => item.counselorId !== targetUser.id);
-        writeJson(CLASSES_KEY, next);
-        setClassMemberships(memberships => {
-          const nextMemberships = memberships.filter(item => !removedClassIds.has(item.classId));
-          writeJson(MEMBERSHIPS_KEY, nextMemberships);
-          return nextMemberships;
-        });
-        return next;
-      });
-    } else {
-      setProfiles(prev => {
-        const next = { ...prev };
-        delete next[targetUser.id];
-        writeJson(PROFILES_KEY, next);
-        return next;
-      });
-      setClassMemberships(prev => {
-        const next = prev.filter(item => item.studentId !== targetUser.id);
-        writeJson(MEMBERSHIPS_KEY, next);
-        return next;
-      });
-    }
-    setAdminNotice(`${targetUser.name} 계정을 ${nextRole === "counselor" ? "상담사" : "학생"}로 변경했습니다.`);
+    setProfiles(prev => {
+      const next = { ...prev };
+      delete next[targetUser.id];
+      writeJson(PROFILES_KEY, next);
+      return next;
+    });
+    setClassMemberships(prev => {
+      const next = prev.filter(item => item.studentId !== targetUser.id);
+      writeJson(MEMBERSHIPS_KEY, next);
+      return next;
+    });
+    setAdminNotice(`${targetUser.name} 계정을 상담사로 변경했습니다.`);
   };
 
   const joinClassWithCode = async e => {
@@ -3701,7 +3682,7 @@ export default function App() {
 	              <div className="request-top">
 	                <div>
 	                  <div className="secl">가입자 역할 관리</div>
-	                  <div className="mini-body">Supabase Auth 목록은 모두 일반 user로 보입니다. 실제 학생/상담사 구분은 여기서 관리합니다.</div>
+	                  <div className="mini-body">학생으로 가입된 사용자를 상담사로 전환합니다. 상담사 계정은 이 화면에서 학생으로 되돌리지 않습니다.</div>
 	                </div>
 	                <span className="status-pill sent">{manageableUsers.length}명</span>
 	              </div>
@@ -3715,8 +3696,11 @@ export default function App() {
 	                    <div><span className={`role-pill ${user.role}`}>{roleLabels[user.role] || user.role}</span></div>
 	                    <div>{user.role === "student" ? user.highSchool || "학교 미입력" : getCounselorAccess(user.id)?.joinCode || "코드 미발급"}</div>
 	                    <div className="admin-role-actions">
-	                      <button className="ghost-btn" type="button" disabled={user.role === "student"} onClick={() => changeUserRole(user, "student")}>학생으로</button>
-	                      <button className="small-primary" type="button" disabled={user.role === "counselor"} onClick={() => changeUserRole(user, "counselor")}>상담사로</button>
+	                      {user.role === "student" ? (
+	                        <button className="small-primary" type="button" onClick={() => changeUserRole(user, "counselor")}>상담사로</button>
+	                      ) : (
+	                        <span className="role-pill counselor">상담사 등록됨</span>
+	                      )}
 	                    </div>
 	                  </div>
 	                ))}
