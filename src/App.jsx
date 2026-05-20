@@ -642,6 +642,19 @@ const getAdmissionTrackLabels = track => {
   return [...new Set(labels)];
 };
 
+const isComprehensiveAdmissionTrack = rowOrTrack => /종합/.test(rowOrTrack?.name || "");
+const summarizeAdmissionRows = rows => {
+  if (!rows.length) return { avgGrade:null, cutGrade:null, gradeRange:"-", count:0 };
+  const minGrade = Math.min(...rows.map(row => row.avg));
+  const maxGrade = Math.max(...rows.map(row => row.last));
+  return {
+    avgGrade: clampGrade(rows.reduce((sum, row) => sum + row.avg, 0) / rows.length),
+    cutGrade: clampGrade(rows.reduce((sum, row) => sum + row.cut70, 0) / rows.length),
+    gradeRange: `${minGrade.toFixed(1)}~${maxGrade.toFixed(1)}등급`,
+    count: rows.length,
+  };
+};
+
 const buildComprehensiveTrack = track => ({
   ...track,
   name: "학생부종합 일반전형",
@@ -693,12 +706,16 @@ const getLastYearAdmissionStats = (univ, dept) => {
   const minGrade = rows.length ? Math.min(...rows.map(row => row.avg)) : null;
   const maxGrade = rows.length ? Math.max(...rows.map(row => row.last)) : null;
   const bestTrack = rows.slice().sort((a, b) => a.avg - b.avg)[0];
+  const comprehensiveRows = rows.filter(isComprehensiveAdmissionTrack);
+  const generalRows = rows.filter(row => !isComprehensiveAdmissionTrack(row));
   return {
     year: LAST_ADMISSION_YEAR,
     dept: selectedDept,
     field: getDepartmentField(selectedDept),
     info: getDepartmentInfo(selectedDept),
     rows,
+    generalStats: summarizeAdmissionRows(generalRows.length ? generalRows : rows),
+    comprehensiveStats: summarizeAdmissionRows(comprehensiveRows),
     avgGrade,
     cutGrade,
     gradeRange: minGrade && maxGrade ? `${minGrade.toFixed(1)}~${maxGrade.toFixed(1)}등급` : "자료 없음",
@@ -1588,6 +1605,8 @@ select:focus{border-color:#0EA5E9;}
 .admission-stat{border-radius:14px;background:#F8FAFC;border:1px solid #E5EAF1;padding:13px 14px;}
 .admission-stat-label{font-size:11px;color:#9AA6B2;margin-bottom:7px;font-weight:700;}
 .admission-stat-value{font-size:18px;font-weight:800;color:#202632;letter-spacing:-0.3px;}
+.admission-value-blue{color:#0EA5E9;}
+.admission-value-orange{color:#F97316;}
 .admission-table-wrap{overflow-x:auto;border:1px solid #E5EAF1;border-radius:14px;background:rgba(255,255,255,0.62);}
 .admission-table{width:100%;border-collapse:collapse;min-width:680px;}
 .admission-table th{padding:11px 12px;background:#F8FAFC;border-bottom:1px solid #E5EAF1;font-size:11px;color:#6B7684;font-weight:800;text-align:left;}
@@ -1597,18 +1616,24 @@ select:focus{border-color:#0EA5E9;}
 .track-type-row{display:flex;flex-wrap:wrap;gap:5px;margin-top:7px;}
 .track-type-pill{display:inline-flex;align-items:center;border-radius:999px;background:var(--brand-blue-soft);color:var(--brand-blue);font-size:10.5px;font-weight:900;line-height:1;padding:4px 8px;}
 .track-type-pill.secondary{background:var(--brand-orange-soft);color:var(--brand-orange);}
+.track-type-pill.comprehensive{background:var(--brand-orange-soft);color:var(--brand-orange);}
 .dept-stat-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px;}
 .dept-stat-row{border:1px solid #E5EAF1;border-radius:14px;background:#fff;padding:13px;text-align:left;cursor:pointer;font-family:'Noto Sans KR',sans-serif;transition:all 0.14s;}
 .dept-stat-row:hover,.dept-stat-row.active{border-color:#0EA5E9;background:#F5FBFF;box-shadow:0 10px 24px rgba(14,165,233,0.08);}
 .dept-stat-name{font-size:13.5px;font-weight:800;color:#202632;margin-bottom:5px;}
 .dept-stat-meta{font-size:12px;color:#6B7684;line-height:1.5;}
-.dept-stat-grade{margin-top:9px;font-size:18px;font-weight:900;color:#0EA5E9;letter-spacing:-0.4px;}
+.dept-stat-grade-row{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:10px;}
+.dept-stat-grade{display:inline-flex;align-items:baseline;gap:5px;font-size:17px;font-weight:900;letter-spacing:-0.4px;}
+.dept-stat-grade small{font-size:10.5px;font-weight:900;}
+.dept-stat-grade.blue{color:#0EA5E9;}
+.dept-stat-grade.orange{color:#F97316;}
 .tcard{border:1px solid #E5EAF1;border-radius:12px;padding:16px 18px;margin-bottom:10px;}
 .tabs{display:flex;gap:6px;margin-bottom:14px;}
 .tab{padding:7px 18px;border-radius:8px;border:1px solid #E1E7EF;background:#fff;font-size:13px;cursor:pointer;font-family:'Noto Sans KR',sans-serif;color:#4B5563;transition:all 0.12s;}
 .tab.active{background:#0EA5E9;color:#fff;border-color:#0EA5E9;font-weight:500;}
 .mbar{height:6px;background:#EEF2F7;border-radius:3px;margin-top:6px;overflow:hidden;}
-.dchip{display:inline-block;font-size:12.5px;padding:5px 12px;border-radius:20px;background:#F2F5F9;border:1px solid #E5EAF1;color:#374151;margin:3px;}
+.dchip{display:inline-block;font-size:12.5px;padding:5px 12px;border-radius:20px;background:#F2F5F9;border:1px solid #E5EAF1;color:#374151;margin:3px;font-family:'Noto Sans KR',sans-serif;cursor:pointer;}
+.dchip:hover,.dchip.active{border-color:#0EA5E9;background:#EAF2FF;color:#0EA5E9;font-weight:800;}
 .gtable{width:100%;border-collapse:collapse;}
 .gtable th{padding:9px 6px;font-size:12px;color:#9AA6B2;font-weight:500;border-bottom:1px solid #EEF2F7;text-align:center;}
 .gtable th:first-child{text-align:left;}
@@ -2496,6 +2521,7 @@ export default function App() {
   const [section, setSection] = useState("홈");
   const [targets, setTargets] = useState([]);
   const [selId, setSelId] = useState(null);
+  const [selectedDeptByUniversity, setSelectedDeptByUniversity] = useState({});
   const [query, setQuery] = useState("");
   const [apiUniversities, setApiUniversities] = useState([]);
   const [apiMajors, setApiMajors] = useState([]);
@@ -3248,9 +3274,21 @@ export default function App() {
   const selectedSchoolKey = sel ? schoolLookupKey(sel.name) : "";
   const selectedDepartmentRecord = selectedSchoolKey ? schoolDepartmentIndex[selectedSchoolKey] : null;
 
-  const addUniv = u => { if (!isAdded(u.id)) setTargets(p => [...p, { ...u, dept: "" }]); setSelId(u.id); setQuery(""); };
+  const addUniv = u => {
+    if (!isAdded(u.id)) {
+      const departments = departmentOptionsForUniversity(u, apiMajors, exactDepartmentsForUniversity(u));
+      const chosenDept = departments.includes(selectedDeptByUniversity[u.id]) ? selectedDeptByUniversity[u.id] : departments[0] || "";
+      setTargets(p => [...p, { ...u, dept: chosenDept }]);
+    }
+    setSelId(u.id);
+    setQuery("");
+  };
   const removeUniv = id => { setTargets(p => p.filter(u => u.id !== id)); if (selId === id) setSelId(null); };
   const setDept = (id, dept) => setTargets(p => p.map(u => u.id === id ? { ...u, dept } : u));
+  const chooseDept = (id, dept) => {
+    setSelectedDeptByUniversity(prev => ({ ...prev, [id]: dept }));
+    if (isAdded(id)) setDept(id, dept);
+  };
   const toggleChecklist = id => setChecklist(prev => ({ ...prev, [id]: !prev[id] }));
   const setAssignmentStatus = (id, status) => setAssignments(prev => prev.map(item => item.id === id ? { ...item, status } : item));
   const handleAssignmentDrop = status => {
@@ -3276,11 +3314,17 @@ export default function App() {
   const gradeWarnings = gradeInflationWarningsForGrades(grades);
   const matchSel = sel ? getMatch(sel) : null;
   const selectedDepartmentOptions = sel ? departmentOptionsForUniversity(sel, apiMajors, selectedDepartmentRecord?.departments || []) : [];
+  const selectedDeptDraft = sel ? selectedDeptByUniversity[sel.id] : "";
   const selectedDept = sel && selectedDepartmentOptions.length
-    ? (selectedDepartmentOptions.includes(addedTarget?.dept) ? addedTarget.dept : selectedDepartmentOptions[0])
+    ? (selectedDepartmentOptions.includes(selectedDeptDraft)
+      ? selectedDeptDraft
+      : selectedDepartmentOptions.includes(addedTarget?.dept)
+        ? addedTarget.dept
+        : selectedDepartmentOptions[0])
     : "";
-  const admissionStats = sel && selectedDept ? getLastYearAdmissionStats(sel, selectedDept) : null;
-  const departmentStats = sel ? selectedDepartmentOptions.slice(0, 80).map(dept => getLastYearAdmissionStats(sel, dept)) : [];
+  const selectedStatsUniversity = sel ? { ...sel, depts: selectedDepartmentOptions.length ? selectedDepartmentOptions : sel.depts } : null;
+  const admissionStats = selectedStatsUniversity && selectedDept ? getLastYearAdmissionStats(selectedStatsUniversity, selectedDept) : null;
+  const departmentStats = selectedStatsUniversity ? selectedDepartmentOptions.slice(0, 80).map(dept => getLastYearAdmissionStats(selectedStatsUniversity, dept)) : [];
 
   const updateProfileStudentProfile = updater => {
     if (!profileStudent) return;
@@ -4953,7 +4997,7 @@ export default function App() {
                 {isAdded(sel.id) && (
                   <div style={{ marginTop:14, paddingTop:14, borderTop:"1px solid #EEF2F7" }}>
                     <div style={{ fontSize:12, color:"#9AA6B2", marginBottom:6 }}>관심 학과</div>
-                    <select value={selectedDepartmentOptions.includes(addedTarget?.dept) ? addedTarget.dept : ""} onChange={e => setDept(sel.id, e.target.value)} disabled={!selectedDepartmentOptions.length}>
+                    <select value={selectedDept} onChange={e => chooseDept(sel.id, e.target.value)} disabled={!selectedDepartmentOptions.length}>
                       <option value="">학과 선택</option>
                       {selectedDepartmentOptions.map(d => <option key={d} value={d}>{d}</option>)}
                     </select>
@@ -4998,12 +5042,12 @@ export default function App() {
                   </div>
                   <div className="admission-grid">
                     <div className="admission-stat">
-                      <div className="admission-stat-label">합격 평균</div>
-                      <div className="admission-stat-value">{admissionStats.avgGrade ? `${admissionStats.avgGrade.toFixed(1)}등급` : "-"}</div>
+                      <div className="admission-stat-label">학생부 일반 평균</div>
+                      <div className="admission-stat-value admission-value-blue">{admissionStats.generalStats?.avgGrade ? `${admissionStats.generalStats.avgGrade.toFixed(1)}등급` : "-"}</div>
                     </div>
                     <div className="admission-stat">
-                      <div className="admission-stat-label">70% 컷</div>
-                      <div className="admission-stat-value">{admissionStats.cutGrade ? `${admissionStats.cutGrade.toFixed(1)}등급` : "-"}</div>
+                      <div className="admission-stat-label">학생부종합 평균</div>
+                      <div className="admission-stat-value admission-value-orange">{admissionStats.comprehensiveStats?.avgGrade ? `${admissionStats.comprehensiveStats.avgGrade.toFixed(1)}등급` : "-"}</div>
                     </div>
                     <div className="admission-stat">
                       <div className="admission-stat-label">평균 경쟁률</div>
@@ -5033,7 +5077,7 @@ export default function App() {
                               <strong>{row.name}</strong>
                               {!!row.labels?.length && (
                                 <div className="track-type-row">
-                                  {row.labels.map(label => <span key={label} className={`track-type-pill${label === "일반전형" ? " secondary" : ""}`}>{label}</span>)}
+                                  {row.labels.map(label => <span key={label} className={`track-type-pill${/종합/.test(label) ? " comprehensive" : ""}`}>{label}</span>)}
                                 </div>
                               )}
                               <div style={{ fontSize:11, color:"#9AA6B2", marginTop:3 }}>{row.note}</div>
@@ -5063,11 +5107,14 @@ export default function App() {
                         key={item.dept}
                         type="button"
                         className={`dept-stat-row${selectedDept === item.dept ? " active" : ""}`}
-                        onClick={() => { if (isAdded(sel.id)) setDept(sel.id, item.dept); }}
+                        onClick={() => chooseDept(sel.id, item.dept)}
                       >
                         <div className="dept-stat-name">{item.dept}</div>
                         <div className="dept-stat-meta">{item.field} · {item.gradeRange}</div>
-                        <div className="dept-stat-grade">{item.avgGrade ? `${item.avgGrade.toFixed(1)}등급` : "-"}</div>
+                        <div className="dept-stat-grade-row">
+                          <span className="dept-stat-grade blue"><small>일반</small>{item.generalStats?.avgGrade ? `${item.generalStats.avgGrade.toFixed(1)}등급` : "-"}</span>
+                          <span className="dept-stat-grade orange"><small>종합</small>{item.comprehensiveStats?.avgGrade ? `${item.comprehensiveStats.avgGrade.toFixed(1)}등급` : "-"}</span>
+                        </div>
                       </button>
                     ))}
                   </div>
@@ -5100,7 +5147,7 @@ export default function App() {
               <div className="card">
                 <div className="secl">📚 학과 정보 ({selectedDepartmentOptions.length}개)</div>
                 {selectedDepartmentOptions.length ? (
-                  <div>{selectedDepartmentOptions.slice(0, 120).map(d => <span key={d} className="dchip">{d}</span>)}</div>
+                  <div>{selectedDepartmentOptions.slice(0, 120).map(d => <button key={d} type="button" className={`dchip${selectedDept === d ? " active" : ""}`} onClick={() => chooseDept(sel.id, d)}>{d}</button>)}</div>
                 ) : (
                   <div className="mini-body">확인된 학교별 학과 데이터가 없습니다. 임시 학과 목록은 표시하지 않습니다.</div>
                 )}
