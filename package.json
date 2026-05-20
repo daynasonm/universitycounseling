@@ -1,6 +1,7 @@
 {
   "scripts": {
     "dev": "vite",
+    "data:careernet": "node scripts/update-careernet-departments.mjs",
     "build": "vite build",
     "preview": "vite preview",
     "mobile:sync": "npm run build && cap sync",

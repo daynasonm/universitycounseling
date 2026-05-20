@@ -16,6 +16,7 @@ import {
   deleteBackendJournal,
   runAiAnalysis,
 } from "./services/supabaseBackend";
+import careerNetDepartments from "./data/careernetDepartments.generated.json";
 
 const COUNSELOR_INVITE_CODE = (import.meta.env?.VITE_COUNSELOR_INVITE_CODE || "topclass-counselor-2026").trim();
 const LOCAL_HOSTNAMES = new Set(["localhost", "127.0.0.1", "::1", ""]);
@@ -256,6 +257,11 @@ const mergeUniversityCatalog = rows => {
 };
 const asArray = value => Array.isArray(value) ? value : value ? [value] : [];
 const stripHtml = value => String(value || "").replace(/<br\s*\/?>/gi, " ").replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim();
+const schoolLookupKey = name => String(name || "")
+  .replace(/\([^)]*\)/g, "")
+  .replace(/[\s·ㆍ\-_.]/g, "")
+  .trim();
+const generatedDepartmentIndex = Object.fromEntries(Object.entries(careerNetDepartments || {}).filter(([key]) => key !== "_meta"));
 const careerNetSchoolToUniversity = (item, index) => {
   const name = item.schoolName;
   if (!name) return null;
@@ -273,6 +279,7 @@ const careerNetMajorToOption = item => {
   if (!name) return null;
   return {
     id: `careernet-major-${item.majorSeq || universitySlug(name)}`,
+    majorSeq: item.majorSeq,
     name,
     field: item.lClass || "학과",
     aliases: String(item.facilName || "").split(",").map(value => value.trim()).filter(Boolean).slice(0, 12),
@@ -283,23 +290,10 @@ const mergeDepartmentOptions = (base = [], apiMajors = []) => {
   const apiNames = apiMajors.map(major => typeof major === "string" ? major : major.name).filter(Boolean);
   return [...new Set([...base, ...apiNames])].sort((a, b) => a.localeCompare(b, "ko"));
 };
-const majorMatchesUniversity = (major, univ) => {
-  if (!univ) return false;
-  const terms = [...(univ.keywords || []), ...(univ.depts || [])].filter(Boolean);
-  if (!terms.length) return false;
-  const haystack = `${major.name || ""} ${major.field || ""} ${(major.aliases || []).join(" ")}`.toLowerCase();
-  return terms.some(term => {
-    const clean = String(term).replace(/학부|학과|전공|과정/g, "").trim().toLowerCase();
-    return clean.length >= 2 && haystack.includes(clean);
-  });
-};
-const departmentOptionsForUniversity = (univ, apiMajors = []) => {
-  const base = univ?.depts || [];
-  const matchedMajors = apiMajors
-    .filter(major => majorMatchesUniversity(major, univ))
-    .map(major => major.name)
-    .filter(Boolean);
-  return mergeDepartmentOptions(base, matchedMajors);
+const departmentOptionsForUniversity = (univ, apiMajors = [], exactDepartments = []) => {
+  if (exactDepartments?.length) return mergeDepartmentOptions(exactDepartments);
+  if (univ?.departmentSource === "careernet") return mergeDepartmentOptions(univ.depts || []);
+  return [];
 };
 async function fetchCareerNetPaged(baseParams, mapper, maxPages = 6) {
   if (!CAREERNET_API_KEY) return [];
@@ -326,12 +320,6 @@ async function fetchCareerNetPaged(baseParams, mapper, maxPages = 6) {
   return all;
 }
 const loadCareerNetUniversities = async () => {
-  const universities = await fetchCareerNetPaged(
-    { svcCode:"SCHOOL", gubun:"대학교" },
-    careerNetSchoolToUniversity,
-    10,
-  );
-  if (universities.length) return universities;
   return fetchCareerNetPaged(
     { svcCode:"SCHOOL", gubun:"univ_list" },
     careerNetSchoolToUniversity,
@@ -339,12 +327,6 @@ const loadCareerNetUniversities = async () => {
   );
 };
 const loadCareerNetMajors = async () => {
-  const majors = await fetchCareerNetPaged(
-    { svcCode:"MAJOR", gubun:"대학교" },
-    careerNetMajorToOption,
-    10,
-  );
-  if (majors.length) return majors;
   return fetchCareerNetPaged(
     { svcCode:"MAJOR", gubun:"univ_list" },
     careerNetMajorToOption,
@@ -2424,6 +2406,7 @@ export default function App() {
   const [query, setQuery] = useState("");
   const [apiUniversities, setApiUniversities] = useState([]);
   const [apiMajors, setApiMajors] = useState([]);
+  const [schoolDepartmentIndex] = useState(() => generatedDepartmentIndex);
   const [careerTests, setCareerTests] = useState(CAREER_TESTS);
   const [universityApiStatus, setUniversityApiStatus] = useState(CAREERNET_API_KEY ? "loading" : "fallback");
   const [regionFilter, setRegionFilter] = useState("all");
@@ -3151,21 +3134,25 @@ export default function App() {
   const profileTargetIds = new Set((profileStudent?.profile.targets || []).map(item => item.id));
   const profileRecordText = profileStudent?.profile.gibpu && !profileStudent.profile.gibpu.error ? profileStudent.profile.gibpu.원문 || "" : "";
   const activeUniversityFilters = regionFilter !== "all" || departmentFilter !== "all" || rankFilter !== "overall";
+  const exactDepartmentsForUniversity = univ => schoolDepartmentIndex[schoolLookupKey(univ?.name)]?.departments || [];
   const filtered = universityCatalog
     .filter(u => {
       const q = query.trim().toLowerCase();
-      const searchable = `${u.name} ${u.short} ${u.region} ${u.type} ${(u.depts || []).join(" ")} ${(u.keywords || []).join(" ")}`.toLowerCase();
+      const exactDepartments = exactDepartmentsForUniversity(u);
+      const searchable = `${u.name} ${u.short} ${u.region} ${u.type} ${(exactDepartments.length ? exactDepartments : u.depts || []).join(" ")} ${(u.keywords || []).join(" ")}`.toLowerCase();
       const compactSearchable = searchable.replace(/\s+/g, "");
       const compactQuery = q.replace(/\s+/g, "");
       return (!q || searchable.includes(q) || compactSearchable.includes(compactQuery))
         && (regionFilter === "all" || u.region === regionFilter)
-        && departmentFilterMatches(u, departmentFilter);
+        && departmentFilterMatches(exactDepartments.length ? { ...u, depts: exactDepartments } : u, departmentFilter);
     })
     .sort((a, b) => rankScore(a, rankFilter, departmentFilter) - rankScore(b, rankFilter, departmentFilter) || a.name.localeCompare(b.name, "ko"))
     .slice(0, query.trim() || activeUniversityFilters ? 160 : 0);
   const sel = universityCatalog.find(u => u.id === selId);
   const isAdded = id => targets.some(u => u.id === id);
   const addedTarget = targets.find(u => u.id === selId);
+  const selectedSchoolKey = sel ? schoolLookupKey(sel.name) : "";
+  const selectedDepartmentRecord = selectedSchoolKey ? schoolDepartmentIndex[selectedSchoolKey] : null;
 
   const addUniv = u => { if (!isAdded(u.id)) setTargets(p => [...p, { ...u, dept: "" }]); setSelId(u.id); setQuery(""); };
   const removeUniv = id => { setTargets(p => p.filter(u => u.id !== id)); if (selId === id) setSelId(null); };
@@ -3194,9 +3181,11 @@ export default function App() {
   const hasGrades = chartData.some(d => Object.keys(d).length > 1);
   const avg = coreAvg();
   const matchSel = sel ? getMatch(sel) : null;
-  const selectedDepartmentOptions = sel ? departmentOptionsForUniversity(sel, apiMajors) : [];
-  const selectedDept = sel ? (addedTarget?.dept || selectedDepartmentOptions[0] || "") : "";
-  const admissionStats = sel ? getLastYearAdmissionStats(sel, selectedDept) : null;
+  const selectedDepartmentOptions = sel ? departmentOptionsForUniversity(sel, apiMajors, selectedDepartmentRecord?.departments || []) : [];
+  const selectedDept = sel && selectedDepartmentOptions.length
+    ? (selectedDepartmentOptions.includes(addedTarget?.dept) ? addedTarget.dept : selectedDepartmentOptions[0])
+    : "";
+  const admissionStats = sel && selectedDept ? getLastYearAdmissionStats(sel, selectedDept) : null;
   const departmentStats = sel ? selectedDepartmentOptions.slice(0, 80).map(dept => getLastYearAdmissionStats(sel, dept)) : [];
 
   const updateProfileStudentProfile = updater => {
@@ -3225,9 +3214,10 @@ export default function App() {
 
   const addProfileTarget = university => {
     if (!profileStudent || profileTargetIds.has(university.id)) return;
+    const departments = exactDepartmentsForUniversity(university);
     updateProfileStudentProfile(profile => ({
       ...profile,
-      targets: [...(profile.targets || []), { ...university, dept: university.depts?.[0] || "" }],
+      targets: [...(profile.targets || []), { ...university, dept: departments[0] || "" }],
     }));
     setQuery("");
   };
@@ -4306,7 +4296,7 @@ export default function App() {
                               <label htmlFor={`profile-target-dept-${t.id}`}>관심 학과</label>
                               <select id={`profile-target-dept-${t.id}`} className="auth-input" value={t.dept || ""} onChange={e => setProfileTargetDept(t.id, e.target.value)}>
                                 <option value="">학과 선택</option>
-                                {departmentOptionsForUniversity(t, apiMajors).map(dept => <option key={dept} value={dept}>{dept}</option>)}
+                                {departmentOptionsForUniversity(t, apiMajors, exactDepartmentsForUniversity(t)).map(dept => <option key={dept} value={dept}>{dept}</option>)}
                               </select>
                             </div>
                             <div className="target-stack">
@@ -4773,22 +4763,25 @@ export default function App() {
 
             {(query || activeUniversityFilters) && filtered.length > 0 && (
               <div className="rcard">
-                {filtered.map(u => (
-                  <div key={u.id} className="rrow" onClick={() => { setSelId(u.id); setQuery(""); }}>
-                    <span className="dot" style={{ background:u.color, width:10, height:10 }} />
-                    <div style={{ flex:1 }}>
-                      <div className="rname">{u.name}</div>
-                      <div className="rmeta">{u.region} · {u.type} · {TIER_LABEL[u.tier]}권</div>
-                      {(u.depts || []).length > 0 && (
-                        <div className="rmeta">{u.depts.slice(0, 5).join(" · ")}</div>
-                      )}
+                {filtered.map(u => {
+                  const exactDepartments = exactDepartmentsForUniversity(u);
+                  return (
+                    <div key={u.id} className="rrow" onClick={() => { setSelId(u.id); setQuery(""); }}>
+                      <span className="dot" style={{ background:u.color, width:10, height:10 }} />
+                      <div style={{ flex:1 }}>
+                        <div className="rname">{u.name}</div>
+                        <div className="rmeta">{u.region} · {u.type} · {TIER_LABEL[u.tier]}권</div>
+                        {exactDepartments.length > 0 && (
+                          <div className="rmeta">{exactDepartments.slice(0, 5).join(" · ")}</div>
+                        )}
+                      </div>
+                      <button className={`abtn ${isAdded(u.id)?"done":"add"}`}
+                        onClick={e => { e.stopPropagation(); addUniv(u); }}>
+                        {isAdded(u.id) ? "추가됨" : "+ 추가"}
+                      </button>
                     </div>
-                    <button className={`abtn ${isAdded(u.id)?"done":"add"}`}
-                      onClick={e => { e.stopPropagation(); addUniv(u); }}>
-                      {isAdded(u.id) ? "추가됨" : "+ 추가"}
-                    </button>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
             {(query || activeUniversityFilters) && !filtered.length && <div style={{ color:"#9AA6B2", fontSize:14, textAlign:"center", padding:"20px 0" }}>검색 결과 없음</div>}
@@ -4813,7 +4806,7 @@ export default function App() {
                 {isAdded(sel.id) && (
                   <div style={{ marginTop:14, paddingTop:14, borderTop:"1px solid #EEF2F7" }}>
                     <div style={{ fontSize:12, color:"#9AA6B2", marginBottom:6 }}>관심 학과</div>
-                    <select value={addedTarget?.dept||""} onChange={e => setDept(sel.id, e.target.value)}>
+                    <select value={selectedDepartmentOptions.includes(addedTarget?.dept) ? addedTarget.dept : ""} onChange={e => setDept(sel.id, e.target.value)} disabled={!selectedDepartmentOptions.length}>
                       <option value="">학과 선택</option>
                       {selectedDepartmentOptions.map(d => <option key={d} value={d}>{d}</option>)}
                     </select>
@@ -4830,6 +4823,15 @@ export default function App() {
                     <div style={{ fontSize:11, color:"#6B7684", marginBottom:2 }}>합격 가능성</div>
                     <div style={{ fontSize:16, fontWeight:600, color:matchSel.color }}>{matchSel.label}</div>
                     <div className="mbar" style={{ width:140 }}><div style={{ height:"100%", width:`${matchSel.pct}%`, background:matchSel.color, borderRadius:3 }} /></div>
+                  </div>
+                </div>
+              )}
+
+              {sel && !selectedDepartmentOptions.length && (
+                <div className="card">
+                  <div className="secl">학과별 수시 합격 등급표</div>
+                  <div className="mini-body">
+                    CareerNet 학교별 학과 데이터에서 이 학교에 연결된 학과를 찾지 못했습니다. 임시 학과는 표시하지 않습니다.
                   </div>
                 </div>
               )}
@@ -4906,7 +4908,7 @@ export default function App() {
                 <div className="card">
                 <div className="secl">학과별 수시 합격 등급표</div>
                 <div className="mini-body" style={{ marginBottom:10 }}>
-                  {apiMajors.length ? `커리어넷 학과정보 ${apiMajors.length}개 기준으로 표시합니다.` : "내장 학과 데이터 기준으로 표시합니다."}
+                  CareerNet 학과 상세에서 이 학교에 연결된 학과만 표시합니다.
                 </div>
                   <div className="dept-stat-list">
                     {departmentStats.map(item => (
@@ -4950,7 +4952,11 @@ export default function App() {
 
               <div className="card">
                 <div className="secl">📚 학과 정보 ({selectedDepartmentOptions.length}개)</div>
-                <div>{selectedDepartmentOptions.slice(0, 120).map(d => <span key={d} className="dchip">{d}</span>)}</div>
+                {selectedDepartmentOptions.length ? (
+                  <div>{selectedDepartmentOptions.slice(0, 120).map(d => <span key={d} className="dchip">{d}</span>)}</div>
+                ) : (
+                  <div className="mini-body">확인된 학교별 학과 데이터가 없습니다. 임시 학과 목록은 표시하지 않습니다.</div>
+                )}
               </div>
             </>}
 

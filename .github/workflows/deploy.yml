@@ -32,6 +32,12 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Generate CareerNet school departments
+        if: ${{ secrets.VITE_CAREERNET_API_KEY != '' }}
+        run: npm run data:careernet
+        env:
+          VITE_CAREERNET_API_KEY: ${{ secrets.VITE_CAREERNET_API_KEY }}
+
       - name: Build for GitHub Pages
         run: GITHUB_PAGES=true npm run build
         env:
