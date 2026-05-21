@@ -1115,6 +1115,7 @@ const createProfile = (overrides = {}) => ({
   essays: createEmptyEssays(),
   checklist: {},
   assignments: [],
+  notes: {},
   ...overrides,
 });
 
@@ -1821,6 +1822,9 @@ select:focus{border-color:#0EA5E9;}
 .record-textarea{width:100%;min-height:220px;border:1px solid #E1E7EF;border-radius:16px;background:rgba(248,250,252,0.86);padding:15px 16px;color:#202632;font-size:14px;line-height:1.75;resize:vertical;outline:none;font-family:'Noto Sans KR',sans-serif;box-shadow:inset 0 1px 0 rgba(255,255,255,0.74);}
 .record-textarea:focus{border-color:#0EA5E9;box-shadow:0 0 0 3px rgba(14,165,233,0.10),inset 0 1px 0 rgba(255,255,255,0.74);}
 .profile-record-textarea{min-height:200px;}
+.counselor-memo-textarea{min-height:150px;}
+.record-edit-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:0 0 12px;}
+.record-edit-grid .field{margin-bottom:0;}
 .record-text-hint{font-size:12px;line-height:1.6;color:#9AA6B2;}
 .record-analysis-card{display:grid;grid-template-columns:180px minmax(0,1fr);gap:18px;align-items:start;}
 .record-ai-score{border:1px solid rgba(14,165,233,0.22);border-radius:20px;background:linear-gradient(135deg,rgba(14,165,233,0.13),rgba(255,255,255,0.82));padding:18px;text-align:center;}
@@ -2246,6 +2250,7 @@ select:focus{border-color:#0EA5E9;}
   .assignment-column{min-height:auto;border-radius:20px;}
   .record-analysis-card{grid-template-columns:1fr;}
   .record-analysis-grid{grid-template-columns:1fr;}
+  .record-edit-grid{grid-template-columns:1fr;}
   .record-finding.action{grid-column:auto;}
   .essay-shell{grid-template-columns:1fr;}
   .essay-analysis-card{grid-template-columns:1fr;}
@@ -2679,8 +2684,18 @@ export default function App() {
 
   useEffect(() => {
     if (!currentUser || currentUser.role !== "student" || !profileReady) return;
-    const nextProfile = createProfile({ targets, grades, gibpu, fname, essays, checklist, assignments });
     setProfiles(prev => {
+      const existingProfile = prev[currentUser.id] || {};
+      const nextProfile = createProfile({
+        ...existingProfile,
+        targets,
+        grades,
+        gibpu,
+        fname,
+        essays,
+        checklist,
+        assignments,
+      });
       const next = {
         ...prev,
         [currentUser.id]: nextProfile,
@@ -3348,6 +3363,7 @@ export default function App() {
     ? buildStrategyReport(profileStudent.user, profileStudent.profile, universityCatalog, careerTests)
     : null;
   const profileTargetIds = new Set((profileStudent?.profile.targets || []).map(item => item.id));
+  const profileNotes = profileStudent?.profile.notes || {};
   const profileRecordText = profileStudent?.profile.gibpu && !profileStudent.profile.gibpu.error ? profileStudent.profile.gibpu.원문 || "" : "";
   const activeUniversityFilters = regionFilter !== "all" || departmentFilter !== "all" || rankFilter !== "overall";
   const exactDepartmentsForUniversity = univ => schoolDepartmentIndex[schoolLookupKey(univ?.name)]?.departments || [];
@@ -3444,6 +3460,62 @@ export default function App() {
       else writeJson(USERS_KEY, next);
       return next;
     });
+  };
+
+  const updateProfileNote = (key, value) => {
+    updateProfileStudentProfile(profile => ({
+      ...profile,
+      notes: {
+        ...(profile.notes || {}),
+        [key]: value,
+        updatedAt: new Date().toISOString(),
+        updatedBy: currentUser?.id || "",
+      },
+    }));
+  };
+
+  const updateProfileRecord = updater => {
+    if (!profileStudent) return;
+    updateProfileStudentProfile(profile => {
+      const source = profile.gibpu && !profile.gibpu.error
+        ? profile.gibpu
+        : createRecordUploadSummary({ name:"상담사 입력", type:"text/plain", size:0 }, profileStudent.user.preferredMajor || "");
+      const nextRecord = updater(source);
+      return {
+        ...profile,
+        fname: profile.fname || nextRecord.학생정보?.자료명 || "상담사 입력",
+        gibpu: nextRecord,
+      };
+    });
+  };
+
+  const updateProfileActivityField = (key, value) => {
+    updateProfileRecord(record => ({
+      ...record,
+      창의체험: {
+        ...(record.창의체험 || {}),
+        [key]: value,
+      },
+    }));
+  };
+
+  const updateProfileBehaviorText = value => {
+    updateProfileRecord(record => ({
+      ...record,
+      행동특성종합의견: value,
+    }));
+  };
+
+  const updateProfileReadingText = value => {
+    const books = value
+      .split("\n")
+      .map(line => line.trim())
+      .filter(Boolean)
+      .map(line => {
+        const [title, author = ""] = line.split(" - ");
+        return { 책제목:title.trim(), 저자:author.trim() };
+      });
+    updateProfileRecord(record => ({ ...record, 독서: books }));
   };
 
   const addProfileTarget = university => {
@@ -4330,6 +4402,22 @@ export default function App() {
                 <section className="profile-section">
                   <div className="request-top">
                     <div>
+                      <div className="secl">상담 메모</div>
+                      <div className="mini-body">학생별로 따로 저장되는 상담사 메모입니다. 다른 학생 데이터와 섞이지 않습니다.</div>
+                    </div>
+                    <span className="status-pill sent">{profileNotes.updatedAt ? "저장됨" : "메모 대기"}</span>
+                  </div>
+                  <textarea
+                    className="auth-input textarea-input counselor-memo-textarea"
+                    value={profileNotes.counselorMemo || ""}
+                    onChange={e => updateProfileNote("counselorMemo", e.target.value)}
+                    placeholder="상담 중 확인한 강점, 리스크, 다음 상담 질문을 적어두세요."
+                  />
+                </section>
+
+                <section className="profile-section">
+                  <div className="request-top">
+                    <div>
                       <div className="secl">입시 전략 요약</div>
                       <div className="mini-body">성적 진단, SWOT, 세특 갭, 수시 6장 배치를 상담 전에 빠르게 확인합니다.</div>
                     </div>
@@ -4820,6 +4908,48 @@ export default function App() {
                           onChange={e => updateProfileRecordText(e.target.value)}
                           placeholder="학생이 올린 생활기록부 내용을 옮겨 적거나 OCR 결과를 붙여넣으세요."
                         />
+                      </div>
+                      <div className="record-edit-grid">
+                        <div className="field">
+                          <label htmlFor="profile-record-activity">핵심 활동</label>
+                          <textarea
+                            id="profile-record-activity"
+                            className="auth-input textarea-input"
+                            value={profileStudent.profile.gibpu?.창의체험?.["핵심 활동"] || ""}
+                            onChange={e => updateProfileActivityField("핵심 활동", e.target.value)}
+                            placeholder="동아리, 진로활동, 프로젝트에서 학생이 한 역할과 결과를 정리하세요."
+                          />
+                        </div>
+                        <div className="field">
+                          <label htmlFor="profile-record-major-fit">전공 연결</label>
+                          <textarea
+                            id="profile-record-major-fit"
+                            className="auth-input textarea-input"
+                            value={profileStudent.profile.gibpu?.창의체험?.["전공 연결"] || ""}
+                            onChange={e => updateProfileActivityField("전공 연결", e.target.value)}
+                            placeholder="희망 학과와 연결되는 탐구, 활동, 독서 근거를 적어두세요."
+                          />
+                        </div>
+                        <div className="field">
+                          <label htmlFor="profile-record-reading">독서</label>
+                          <textarea
+                            id="profile-record-reading"
+                            className="auth-input textarea-input"
+                            value={(profileStudent.profile.gibpu?.독서 || []).filter(item => item.책제목).map(item => item.저자 ? `${item.책제목} - ${item.저자}` : item.책제목).join("\n")}
+                            onChange={e => updateProfileReadingText(e.target.value)}
+                            placeholder={"책제목 - 저자 형식으로 한 줄씩 입력"}
+                          />
+                        </div>
+                        <div className="field">
+                          <label htmlFor="profile-record-behavior">행동특성 및 종합의견</label>
+                          <textarea
+                            id="profile-record-behavior"
+                            className="auth-input textarea-input"
+                            value={profileStudent.profile.gibpu?.행동특성종합의견 || ""}
+                            onChange={e => updateProfileBehaviorText(e.target.value)}
+                            placeholder="성실성, 협업, 주도성 등 상담에서 확인한 핵심 문장을 정리하세요."
+                          />
+                        </div>
                       </div>
                       {profileStudent.profile.gibpu && !profileStudent.profile.gibpu.error ? (
                         <>

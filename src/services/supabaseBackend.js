@@ -59,6 +59,7 @@ const mapProfile = row => ({
   essays: row.essays || {},
   checklist: row.checklist || {},
   assignments: row.assignments || [],
+  notes: row.notes || {},
 });
 
 const mapRequest = row => ({
@@ -87,7 +88,7 @@ const mapJournal = row => ({
   createdAt: row.created_at,
 });
 
-export const profileToRow = (studentId, profile) => ({
+export const profileToRow = (studentId, profile, options = {}) => ({
   student_id: studentId,
   targets: profile.targets || [],
   grades: profile.grades || {},
@@ -96,6 +97,7 @@ export const profileToRow = (studentId, profile) => ({
   essays: profile.essays || {},
   checklist: profile.checklist || {},
   assignments: profile.assignments || [],
+  ...(options.includeNotes === false ? {} : { notes: profile.notes || {} }),
   updated_at: new Date().toISOString(),
 });
 
@@ -262,6 +264,13 @@ export const saveBackendProfile = async (studentId, profile) => {
   const { error } = await supabase
     .from("student_profiles")
     .upsert(profileToRow(studentId, profile), { onConflict: "student_id" });
+  if (error && `${error.message || ""}`.includes("notes")) {
+    const { error: retryError } = await supabase
+      .from("student_profiles")
+      .upsert(profileToRow(studentId, profile, { includeNotes: false }), { onConflict: "student_id" });
+    if (retryError) throw retryError;
+    return;
+  }
   if (error) throw error;
 };
 

@@ -32,9 +32,12 @@ create table if not exists public.student_profiles (
   essays jsonb not null default '{}'::jsonb,
   checklist jsonb not null default '{}'::jsonb,
   assignments jsonb not null default '[]'::jsonb,
+  notes jsonb not null default '{}'::jsonb,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+alter table public.student_profiles add column if not exists notes jsonb not null default '{}'::jsonb;
 
 create table if not exists public.consultation_requests (
   id text primary key,
