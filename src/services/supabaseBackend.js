@@ -30,6 +30,7 @@ const mapAppUser = row => ({
   gradeLevel: row.grade_level || undefined,
   className: row.class_name || undefined,
   highSchool: row.high_school || undefined,
+  phone: row.phone || undefined,
   preferredMajor: row.preferred_major || undefined,
 });
 
@@ -135,6 +136,7 @@ const getAuthFallbackUser = session => {
     gradeLevel: meta.grade_level,
     className: meta.class_name,
     highSchool: meta.high_school,
+    phone: meta.phone,
     preferredMajor: meta.preferred_major,
   } : null;
 };
@@ -222,6 +224,7 @@ export const signUpBackend = async form => {
     grade_level: role === "student" ? form.gradeLevel : null,
     class_name: role === "student" ? form.className?.trim() || "미배정" : null,
     high_school: role === "student" ? form.highSchool?.trim() : null,
+    phone: form.phone?.trim() || null,
     preferred_major: role === "student" ? form.preferredMajor?.trim() : null,
   };
   const { data, error } = await supabase.auth.signUp({
@@ -264,16 +267,43 @@ export const saveBackendProfile = async (studentId, profile) => {
 
 export const saveBackendUser = async user => {
   if (!supabase || !user?.id) return;
+  const payload = {
+    name: user.name,
+    phone: user.phone || null,
+    grade_level: user.gradeLevel || null,
+    class_name: user.className || null,
+    high_school: user.highSchool || null,
+    preferred_major: user.preferredMajor || null,
+  };
   const { error } = await supabase
     .from("app_users")
-    .update({
-      name: user.name,
-      grade_level: user.gradeLevel || null,
-      class_name: user.className || null,
-      high_school: user.highSchool || null,
-      preferred_major: user.preferredMajor || null,
-    })
+    .update(payload)
     .eq("id", user.id);
+  if (error && `${error.message || ""}`.includes("phone")) {
+    const { phone, ...payloadWithoutPhone } = payload;
+    const { error: retryError } = await supabase
+      .from("app_users")
+      .update(payloadWithoutPhone)
+      .eq("id", user.id);
+    if (retryError) throw retryError;
+    return;
+  }
+  if (error) throw error;
+};
+
+export const updateBackendEmail = async (email, metadata = {}) => {
+  if (!supabase) throw new Error("Supabase 설정이 없습니다.");
+  const nextEmail = email.trim().toLowerCase();
+  const data = {
+    name: metadata.name?.trim() || undefined,
+    phone: metadata.phone?.trim() || undefined,
+    grade_level: metadata.gradeLevel || undefined,
+    high_school: metadata.highSchool?.trim() || undefined,
+  };
+  const { error } = await supabase.auth.updateUser(
+    { email: nextEmail, data },
+    { emailRedirectTo: getEmailRedirectTo() }
+  );
   if (error) throw error;
 };
 

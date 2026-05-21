@@ -9,6 +9,7 @@ import {
   signOutBackend,
   saveBackendProfile,
   saveBackendUser,
+  updateBackendEmail,
   upsertBackendCounselorAccess,
   joinBackendClass,
   upsertBackendRequests,
@@ -1711,7 +1712,21 @@ select:focus{border-color:#0EA5E9;}
 .userbox{margin:12px;padding:12px;border-radius:12px;background:#F2F5F9;border:1px solid #E5EAF1;}
 .user-name{font-size:13px;font-weight:600;color:#202632;margin-bottom:2px;}
 .user-meta{font-size:11px;color:#9AA6B2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.logout-btn{width:100%;margin-top:10px;padding:7px 10px;border:1px solid #E1E7EF;border-radius:8px;background:#fff;color:#4B5563;font-size:12px;cursor:pointer;font-family:'Noto Sans KR',sans-serif;}
+.settings-btn,.logout-btn{width:100%;margin-top:8px;padding:7px 10px;border:1px solid #E1E7EF;border-radius:8px;background:#fff;color:#4B5563;font-size:12px;cursor:pointer;font-family:'Noto Sans KR',sans-serif;}
+.settings-btn{margin-top:10px;background:#EAF7FF;border-color:rgba(14,165,233,0.22);color:#0EA5E9;font-weight:800;}
+.settings-btn:hover,.logout-btn:hover{background:#F7FAFD;}
+.settings-overlay{position:fixed;inset:0;z-index:100;display:flex;align-items:center;justify-content:center;padding:24px;background:rgba(11,19,36,0.42);backdrop-filter:blur(10px);}
+.settings-modal{width:min(520px,100%);max-height:calc(100dvh - 48px);overflow:auto;background:#fff;border:1px solid #E5EAF1;border-radius:18px;padding:22px;box-shadow:0 24px 70px rgba(11,19,36,0.22);}
+.settings-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:18px;}
+.settings-title{font-size:20px;font-weight:900;color:#0B1324;letter-spacing:0;}
+.settings-sub{font-size:13px;color:#6B7684;margin-top:4px;line-height:1.5;}
+.settings-close{width:34px;height:34px;border:1px solid #E1E7EF;border-radius:9px;background:#fff;color:#6B7684;font-size:20px;line-height:1;cursor:pointer;}
+.settings-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.settings-grid .field{margin-bottom:2px;}
+.settings-grid .field-wide{grid-column:1 / -1;}
+.settings-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:16px;}
+.settings-actions .ghost-btn,.settings-actions .primary-btn{width:auto;min-width:96px;}
+.settings-note{padding:10px 12px;border-radius:9px;background:#F8FAFC;border:1px solid #E5EAF1;color:#6B7684;font-size:12.5px;line-height:1.55;margin-top:12px;}
 .cstats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px;}
 .cstat{background:#fff;border:1px solid #E5EAF1;border-radius:12px;padding:14px;}
 .cstat-label{font-size:11px;color:#9AA6B2;margin-bottom:5px;}
@@ -2189,6 +2204,7 @@ select:focus{border-color:#0EA5E9;}
   .booking-sub{font-size:13px;}
   .booking-top-btn{padding:10px 14px;font-size:13px;border-radius:14px;}
   .booking-card{padding:16px;border-radius:18px;}
+  .settings-grid{grid-template-columns:1fr;}
   .calendar-month{font-size:18px;}
   .date-strip{gap:5px;}
   .date-pill{min-height:52px;border-radius:14px;}
@@ -2495,6 +2511,10 @@ export default function App() {
   const [authError, setAuthError] = useState("");
   const [authNotice, setAuthNotice] = useState("");
   const [showResendConfirmation, setShowResendConfirmation] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [settingsForm, setSettingsForm] = useState({ email:"", name:"", phone:"", gradeLevel:"", highSchool:"" });
+  const [settingsError, setSettingsError] = useState("");
+  const [settingsNotice, setSettingsNotice] = useState("");
   const [profileReady, setProfileReady] = useState(false);
   const [counselorTab, setCounselorTab] = useState("students");
   const [adminQuery, setAdminQuery] = useState("");
@@ -2825,10 +2845,86 @@ export default function App() {
     }
   };
 
+  const settingsFromUser = user => ({
+    email: user?.email || "",
+    name: user?.name || "",
+    phone: user?.phone || "",
+    gradeLevel: user?.gradeLevel || "",
+    highSchool: user?.highSchool || "",
+  });
+
+  const openSettings = () => {
+    if (!currentUser) return;
+    setSettingsForm(settingsFromUser(currentUser));
+    setSettingsError("");
+    setSettingsNotice("");
+    setSettingsOpen(true);
+  };
+
+  const setSettingsValue = (key, value) => {
+    setSettingsForm(prev => ({ ...prev, [key]: value }));
+    setSettingsError("");
+    setSettingsNotice("");
+  };
+
+  const saveAccountSettings = async e => {
+    e.preventDefault();
+    if (!currentUser) return;
+
+    const nextEmail = normalizeEmail(settingsForm.email);
+    const nextName = settingsForm.name.trim();
+    const nextPhone = settingsForm.phone.trim();
+    const nextHighSchool = settingsForm.highSchool.trim();
+    const nextGradeLevel = settingsForm.gradeLevel;
+
+    if (!nextName) {
+      setSettingsError("이름을 입력해주세요.");
+      return;
+    }
+    if (!nextEmail || !nextEmail.includes("@")) {
+      setSettingsError("변경할 이메일을 정확히 입력해주세요.");
+      return;
+    }
+
+    const emailChanged = nextEmail !== normalizeEmail(currentUser.email);
+    const personalPatch = {
+      name: nextName,
+      phone: nextPhone || undefined,
+      gradeLevel: nextGradeLevel || undefined,
+      highSchool: nextHighSchool || undefined,
+    };
+    const localPatch = supabaseEnabled && emailChanged
+      ? personalPatch
+      : { ...personalPatch, email: nextEmail };
+
+    try {
+      setSettingsError("");
+      if (supabaseEnabled) {
+        await saveBackendUser({ ...currentUser, ...personalPatch });
+        if (emailChanged) {
+          await updateBackendEmail(nextEmail, personalPatch);
+        }
+      }
+
+      setUsers(prev => {
+        const next = prev.map(user => user.id === currentUser.id ? { ...user, ...localPatch } : user);
+        if (!supabaseEnabled) writeJson(USERS_KEY, next);
+        return next;
+      });
+
+      setSettingsNotice(emailChanged && supabaseEnabled
+        ? "새 이메일로 확인 메일을 보냈습니다. 메일 인증 후 이메일이 바뀝니다."
+        : "설정을 저장했습니다.");
+    } catch (error) {
+      setSettingsError(getAuthErrorMessage(error) || "설정 저장에 실패했습니다.");
+    }
+  };
+
   const logout = async () => {
     if (supabaseEnabled) await signOutBackend();
     localStorage.removeItem(SESSION_KEY);
     setCurrentUserId(null);
+    setSettingsOpen(false);
     setProfileReady(false);
     setTargets([]);
     setGrades({});
@@ -3631,6 +3727,104 @@ export default function App() {
     finally { setParsing(false); }
   };
 
+  const AccountBox = () => {
+    if (!currentUser) return null;
+    return (
+      <div className="userbox">
+        <div className="user-name">{currentUser.name}</div>
+        <div className="user-meta">{currentUser.email}</div>
+        <button className="settings-btn" type="button" onClick={openSettings}>설정</button>
+        <button className="logout-btn" type="button" onClick={logout}>로그아웃</button>
+      </div>
+    );
+  };
+
+  const settingsModal = currentUser && settingsOpen ? (
+    <div className="settings-overlay" role="dialog" aria-modal="true" aria-labelledby="account-settings-title">
+      <form className="settings-modal" onSubmit={saveAccountSettings}>
+        <div className="settings-head">
+          <div>
+            <div id="account-settings-title" className="settings-title">계정 설정</div>
+            <div className="settings-sub">이메일 변경과 기본 개인 정보를 관리합니다.</div>
+          </div>
+          <button className="settings-close" type="button" onClick={() => setSettingsOpen(false)} aria-label="설정 닫기">×</button>
+        </div>
+
+        <div className="settings-grid">
+          <div className="field field-wide">
+            <label htmlFor="settings-email">이메일</label>
+            <input
+              id="settings-email"
+              className="auth-input"
+              type="email"
+              value={settingsForm.email}
+              onChange={e => setSettingsValue("email", e.target.value)}
+              autoComplete="email"
+            />
+          </div>
+          <div className="field">
+            <label htmlFor="settings-name">이름</label>
+            <input
+              id="settings-name"
+              className="auth-input"
+              value={settingsForm.name}
+              onChange={e => setSettingsValue("name", e.target.value)}
+              autoComplete="name"
+            />
+          </div>
+          <div className="field">
+            <label htmlFor="settings-phone">전화번호 (선택)</label>
+            <input
+              id="settings-phone"
+              className="auth-input"
+              type="tel"
+              value={settingsForm.phone}
+              onChange={e => setSettingsValue("phone", e.target.value)}
+              placeholder="예: 010-0000-0000"
+              autoComplete="tel"
+            />
+          </div>
+          <div className="field">
+            <label htmlFor="settings-grade">학년</label>
+            <select
+              id="settings-grade"
+              className="auth-input"
+              value={settingsForm.gradeLevel}
+              onChange={e => setSettingsValue("gradeLevel", e.target.value)}
+            >
+              <option value="">선택 안 함</option>
+              <option value="1학년">1학년</option>
+              <option value="2학년">2학년</option>
+              <option value="3학년">3학년</option>
+            </select>
+          </div>
+          <div className="field">
+            <label htmlFor="settings-school">현재 다니는 고등학교</label>
+            <input
+              id="settings-school"
+              className="auth-input"
+              value={settingsForm.highSchool}
+              onChange={e => setSettingsValue("highSchool", e.target.value)}
+              placeholder="예: 서울고등학교"
+              autoComplete="organization"
+            />
+          </div>
+        </div>
+
+        {supabaseEnabled && normalizeEmail(settingsForm.email) !== normalizeEmail(currentUser.email) && (
+          <div className="settings-note">이메일을 바꾸면 새 이메일로 확인 메일이 발송됩니다. 인증 전까지는 기존 이메일로 로그인해야 합니다.</div>
+        )}
+        {settingsNotice && <div className="auth-notice" style={{ marginTop:12 }}>{settingsNotice}</div>}
+        {settingsError && <div className="auth-error" style={{ marginTop:12 }}>{settingsError}</div>}
+
+        <div className="settings-actions">
+          <button className="ghost-btn" type="button" onClick={() => setSettingsOpen(false)}>닫기</button>
+          <button className="primary-btn" type="submit">저장</button>
+        </div>
+      </form>
+    </div>
+  ) : null;
+
   if (!backendReady) {
     return (
       <>
@@ -3758,6 +3952,7 @@ export default function App() {
 	    return (
 	      <>
 	        <style>{css}</style>
+	        {settingsModal}
 	        <div className="root">
 	          <aside className="sidebar">
 	            <div className="logo">입시<span>플래너</span> 🎓</div>
@@ -3766,11 +3961,7 @@ export default function App() {
 	              <button className="nav-btn active" type="button"><span>⚙️</span>운영 관리</button>
 	            </div>
 	            <div className="sidebar-spacer" />
-	            <div className="userbox">
-	              <div className="user-name">{currentUser.name}</div>
-	              <div className="user-meta">{currentUser.email}</div>
-	              <button className="logout-btn" type="button" onClick={logout}>로그아웃</button>
-	            </div>
+	            <AccountBox />
 	          </aside>
 	          <main className="main">
 	            <div className="ptitle">총관리자 대시보드</div>
@@ -3906,6 +4097,7 @@ export default function App() {
 	    return (
 	      <>
 	        <style>{css}</style>
+	        {settingsModal}
 	        <main className="auth-root">
 	          <form className="auth-card join-card" onSubmit={joinClassWithCode}>
 	            <div className="auth-title">상담사 코드 입력</div>
@@ -3923,6 +4115,7 @@ export default function App() {
 	            </div>
 	            {joinNotice && <div className="auth-error">{joinNotice}</div>}
 	            <button className="primary-btn" type="submit">입장하기</button>
+	            <button className="settings-btn" type="button" onClick={openSettings}>설정</button>
 	            <button className="logout-btn" type="button" onClick={logout}>로그아웃</button>
 	          </form>
 	        </main>
@@ -3934,10 +4127,12 @@ export default function App() {
 	    return (
 	      <>
 	        <style>{css}</style>
+	        {settingsModal}
 	        <main className="auth-root">
 	          <div className="auth-card join-card">
 	            <div className="auth-title">계정 비활성화</div>
 	            <div className="auth-sub">총관리자가 상담사 계정을 다시 활성화하면 학생 관리 화면을 사용할 수 있습니다.</div>
+	            <button className="settings-btn" type="button" onClick={openSettings}>설정</button>
 	            <button className="logout-btn" type="button" onClick={logout}>로그아웃</button>
 	          </div>
 	        </main>
@@ -3949,6 +4144,7 @@ export default function App() {
     return (
       <>
         <style>{css}</style>
+        {settingsModal}
         <div className="root">
           <aside className="sidebar">
             <div className="logo">입시<span>플래너</span> 🎓</div>
@@ -3966,11 +4162,7 @@ export default function App() {
               </button>
             </div>
             <div className="sidebar-spacer" />
-            <div className="userbox">
-              <div className="user-name">{currentUser.name}</div>
-              <div className="user-meta">{currentUser.email}</div>
-              <button className="logout-btn" type="button" onClick={logout}>로그아웃</button>
-            </div>
+            <AccountBox />
           </aside>
           <main className="main">
             {counselorTab === "requests" ? (
@@ -4800,6 +4992,7 @@ export default function App() {
   return (
     <>
       <style>{css}</style>
+      {settingsModal}
       <div className="root">
 
         {/* Sidebar */}
@@ -4827,11 +5020,7 @@ export default function App() {
             </div>
           )}
           <div className="sidebar-spacer" />
-          <div className="userbox">
-            <div className="user-name">{currentUser.name}</div>
-            <div className="user-meta">{currentUser.email}</div>
-            <button className="logout-btn" type="button" onClick={logout}>로그아웃</button>
-          </div>
+          <AccountBox />
         </aside>
 
         {/* Main */}

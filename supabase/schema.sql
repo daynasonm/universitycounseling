@@ -12,12 +12,14 @@ create table if not exists public.app_users (
   grade_level text,
   class_name text,
   high_school text,
+  phone text,
   preferred_major text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
 
 alter table public.app_users add column if not exists is_active boolean not null default true;
+alter table public.app_users add column if not exists phone text;
 alter table public.app_users drop constraint if exists app_users_role_check;
 alter table public.app_users add constraint app_users_role_check check (role in ('admin', 'student', 'counselor'));
 
@@ -180,6 +182,7 @@ begin
     grade_level,
     class_name,
     high_school,
+    phone,
     preferred_major
   )
   values (
@@ -191,6 +194,7 @@ begin
     new.raw_user_meta_data->>'grade_level',
     new.raw_user_meta_data->>'class_name',
     new.raw_user_meta_data->>'high_school',
+    new.raw_user_meta_data->>'phone',
     new.raw_user_meta_data->>'preferred_major'
   )
   on conflict (id) do update set
@@ -201,6 +205,7 @@ begin
     grade_level = excluded.grade_level,
     class_name = excluded.class_name,
     high_school = excluded.high_school,
+    phone = excluded.phone,
     preferred_major = excluded.preferred_major;
 
   if user_role = 'student' then
@@ -259,6 +264,32 @@ drop trigger if exists on_auth_user_created on auth.users;
 create trigger on_auth_user_created
 after insert on auth.users
 for each row execute function public.handle_new_user();
+
+create or replace function public.handle_auth_user_update()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  update public.app_users
+     set email = new.email,
+         name = coalesce(nullif(new.raw_user_meta_data->>'name', ''), name, split_part(new.email, '@', 1)),
+         phone = coalesce(nullif(new.raw_user_meta_data->>'phone', ''), phone),
+         grade_level = coalesce(nullif(new.raw_user_meta_data->>'grade_level', ''), grade_level),
+         high_school = coalesce(nullif(new.raw_user_meta_data->>'high_school', ''), high_school),
+         preferred_major = coalesce(nullif(new.raw_user_meta_data->>'preferred_major', ''), preferred_major),
+         updated_at = now()
+   where id = new.id;
+
+  return new;
+end;
+$$;
+
+drop trigger if exists on_auth_user_updated on auth.users;
+create trigger on_auth_user_updated
+after update on auth.users
+for each row execute function public.handle_auth_user_update();
 
 create or replace function public.is_counselor()
 returns boolean
