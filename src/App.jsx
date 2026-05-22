@@ -7,6 +7,8 @@ import {
   signUpBackend,
   resendConfirmationBackend,
   signOutBackend,
+  onBackendAuthStateChange,
+  updateBackendPassword,
   saveBackendProfile,
   saveBackendUser,
   updateBackendEmail,
@@ -15,6 +17,7 @@ import {
   upsertBackendRequests,
   upsertBackendJournals,
   deleteBackendJournal,
+  removeBackendStudentFromCounselor,
   runAiAnalysis,
 } from "./services/supabaseBackend";
 import careerNetDepartments from "./data/careernetDepartments.generated.json";
@@ -23,6 +26,18 @@ const COUNSELOR_INVITE_CODE = (import.meta.env?.VITE_COUNSELOR_INVITE_CODE || "t
 const LOCAL_HOSTNAMES = new Set(["localhost", "127.0.0.1", "::1", ""]);
 const isLocalRuntime = typeof window === "undefined" ? true : LOCAL_HOSTNAMES.has(window.location.hostname);
 const allowLocalDemoMode = !supabaseEnabled && isLocalRuntime;
+
+const urlHasPasswordRecovery = () => {
+  if (typeof window === "undefined") return false;
+  const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+  const searchParams = new URLSearchParams(window.location.search);
+  return hashParams.get("type") === "recovery" || searchParams.get("type") === "recovery";
+};
+
+const clearAuthCallbackUrl = () => {
+  if (typeof window === "undefined") return;
+  window.history.replaceState({}, document.title, window.location.pathname);
+};
 
 const isUnconfirmedEmailError = message => `${message || ""}`.toLowerCase().includes("email not confirmed");
 
@@ -378,6 +393,11 @@ UNIVS.push(...NATIONAL_UNIVERSITY_ROWS.map((row, index) => makeUniversityRecord(
 const SUBJECTS = ["국어","수학","영어","한국사","사회","과학","체육","음악","미술"];
 const CORE = ["국어","수학","영어"];
 const SEMS = ["고1-1","고1-2","고2-1","고2-2","고3-1"];
+const GRADE_YEAR_GROUPS = [
+  { year:"고1", semesters:["고1-1","고1-2"] },
+  { year:"고2", semesters:["고2-1","고2-2"] },
+  { year:"고3", semesters:["고3-1"] },
+];
 const EXAM_SCORE_TYPES = [
   { key:"midterm", label:"중간" },
   { key:"final", label:"기말" },
@@ -2516,6 +2536,10 @@ export default function App() {
   const [authError, setAuthError] = useState("");
   const [authNotice, setAuthNotice] = useState("");
   const [showResendConfirmation, setShowResendConfirmation] = useState(false);
+  const [passwordRecoveryOpen, setPasswordRecoveryOpen] = useState(() => supabaseEnabled && urlHasPasswordRecovery());
+  const [passwordResetForm, setPasswordResetForm] = useState({ password:"", confirmPassword:"" });
+  const [passwordResetError, setPasswordResetError] = useState("");
+  const [passwordResetNotice, setPasswordResetNotice] = useState("");
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [settingsForm, setSettingsForm] = useState({ email:"", name:"", phone:"", gradeLevel:"", highSchool:"" });
   const [settingsError, setSettingsError] = useState("");
@@ -2534,6 +2558,11 @@ export default function App() {
   const [classFilter, setClassFilter] = useState("all");
   const [scoreFilter, setScoreFilter] = useState("all");
   const [profileStudentId, setProfileStudentId] = useState(null);
+  const [profileEditOpen, setProfileEditOpen] = useState(false);
+  const [profileSelectedTargetId, setProfileSelectedTargetId] = useState(null);
+  const [profileTrackTab, setProfileTrackTab] = useState("수시");
+  const [profileGradeCollapse, setProfileGradeCollapse] = useState({});
+  const [profileActionNotice, setProfileActionNotice] = useState("");
   const [requestStatusFilter, setRequestStatusFilter] = useState("pending");
   const [bookingWeekStart, setBookingWeekStart] = useState(todayValue);
   const [requestForm, setRequestForm] = useState(() => ({ category:"", preferredDate:todayValue(), preferredTime:"", message:"" }));
@@ -2612,6 +2641,21 @@ export default function App() {
     return () => {
       cancelled = true;
     };
+  }, []);
+
+  useEffect(() => {
+    if (!supabaseEnabled) return undefined;
+    return onBackendAuthStateChange(event => {
+      if (event !== "PASSWORD_RECOVERY") return;
+      setPasswordRecoveryOpen(true);
+      setPasswordResetError("");
+      setPasswordResetNotice("새 비밀번호를 입력하면 이 계정의 비밀번호가 변경됩니다.");
+      window.setTimeout(() => {
+        loadBackendState()
+          .then(applyBackendState)
+          .catch(error => setBackendError(error.message || "Supabase 계정 정보를 불러오지 못했습니다."));
+      }, 0);
+    });
   }, []);
 
   useEffect(() => {
@@ -2701,15 +2745,20 @@ export default function App() {
         [currentUser.id]: nextProfile,
       };
       if (!supabaseEnabled) writeJson(PROFILES_KEY, next);
+      else saveBackendProfile(currentUser.id, nextProfile).catch(error => setBackendError(error.message));
       return next;
     });
-    if (supabaseEnabled) saveBackendProfile(currentUser.id, nextProfile).catch(error => setBackendError(error.message));
   }, [targets, grades, gibpu, fname, essays, checklist, assignments, currentUser?.id, currentUser?.role, profileReady]);
 
   useEffect(() => {
     setAssignmentForm(ASSIGNMENT_FORM_DEFAULT);
     setAssignmentNotice("");
     setExpandedJournalId(null);
+    setProfileEditOpen(false);
+    setProfileSelectedTargetId(null);
+    setProfileTrackTab("수시");
+    setProfileGradeCollapse({});
+    setProfileActionNotice("");
   }, [profileStudentId]);
 
   const setAuthValue = (key, value) => {
@@ -2857,6 +2906,49 @@ export default function App() {
       setAuthNotice("인증 메일을 다시 보냈습니다. 메일함과 스팸함을 확인해주세요.");
     } catch (error) {
       setAuthError(getAuthErrorMessage(error) || "인증 메일 재전송에 실패했습니다.");
+    }
+  };
+
+  const setPasswordResetValue = (key, value) => {
+    setPasswordResetForm(prev => ({ ...prev, [key]: value }));
+    setPasswordResetError("");
+    setPasswordResetNotice("");
+  };
+
+  const submitPasswordReset = async e => {
+    e.preventDefault();
+    const password = passwordResetForm.password.trim();
+    const confirmPassword = passwordResetForm.confirmPassword.trim();
+
+    if (!password || !confirmPassword) {
+      setPasswordResetError("새 비밀번호를 입력해주세요.");
+      return;
+    }
+    if (password.length < 6) {
+      setPasswordResetError("비밀번호는 최소 6자 이상이어야 합니다.");
+      return;
+    }
+    if (password !== confirmPassword) {
+      setPasswordResetError("새 비밀번호가 서로 일치하지 않습니다.");
+      return;
+    }
+
+    try {
+      setPasswordResetError("");
+      setPasswordResetNotice("비밀번호를 변경하는 중입니다...");
+      await updateBackendPassword(password);
+      await signOutBackend();
+      clearAuthCallbackUrl();
+      localStorage.removeItem(SESSION_KEY);
+      setCurrentUserId(null);
+      setPasswordRecoveryOpen(false);
+      setPasswordResetForm({ password:"", confirmPassword:"" });
+      setPasswordResetNotice("");
+      setAuthMode("login");
+      setAuthNotice("비밀번호가 변경되었습니다. 새 비밀번호로 로그인해주세요.");
+    } catch (error) {
+      setPasswordResetNotice("");
+      setPasswordResetError(getAuthErrorMessage(error) || "비밀번호 변경에 실패했습니다.");
     }
   };
 
@@ -3362,11 +3454,28 @@ export default function App() {
   const profileStrategy = profileStudent
     ? buildStrategyReport(profileStudent.user, profileStudent.profile, universityCatalog, careerTests)
     : null;
-  const profileTargetIds = new Set((profileStudent?.profile.targets || []).map(item => item.id));
+  const profileTargets = profileStudent?.profile.targets || [];
+  const profileTargetIds = new Set(profileTargets.map(item => item.id));
+  const profileGoalModeExplicit = profileTargets.some(item => Object.prototype.hasOwnProperty.call(item, "goal"));
+  const profileGoalTargets = (profileGoalModeExplicit ? profileTargets.filter(item => item.goal) : profileTargets.slice(0, 2)).slice(0, 2);
+  const profileGoalIds = new Set(profileGoalTargets.map(item => item.id));
+  const profileSelectedTarget = profileTargets.find(item => item.id === profileSelectedTargetId) || profileTargets[0] || null;
   const profileNotes = profileStudent?.profile.notes || {};
   const profileRecordText = profileStudent?.profile.gibpu && !profileStudent.profile.gibpu.error ? profileStudent.profile.gibpu.원문 || "" : "";
   const activeUniversityFilters = regionFilter !== "all" || departmentFilter !== "all" || rankFilter !== "overall";
   const exactDepartmentsForUniversity = univ => schoolDepartmentIndex[schoolLookupKey(univ?.name)]?.departments || [];
+  const profileSelectedDepartments = profileSelectedTarget ? departmentOptionsForUniversity(profileSelectedTarget, apiMajors, exactDepartmentsForUniversity(profileSelectedTarget)) : [];
+  const profileSelectedDept = profileSelectedDepartments.includes(profileSelectedTarget?.dept)
+    ? profileSelectedTarget.dept
+    : profileSelectedTarget?.dept || profileSelectedDepartments[0] || "";
+  const profileSelectedStatsTarget = profileSelectedTarget
+    ? { ...profileSelectedTarget, depts: profileSelectedDepartments.length ? profileSelectedDepartments : profileSelectedTarget.depts }
+    : null;
+  const profileSelectedAdmissionStats = profileSelectedStatsTarget && profileSelectedDept ? getLastYearAdmissionStats(profileSelectedStatsTarget, profileSelectedDept) : null;
+  const profileDepartmentStats = profileSelectedStatsTarget ? profileSelectedDepartments.slice(0, 12).map(dept => getLastYearAdmissionStats(profileSelectedStatsTarget, dept)) : [];
+  const profileSelectedMatch = profileSelectedTarget ? getMatchForAvg(profileSelectedTarget, profileStudent?.avgValue) : null;
+  const profileTrackRows = profileSelectedTarget ? tracksForTab(profileSelectedTarget.tracks, profileTrackTab) : [];
+  const profileEssayDrafts = profileStudent ? { ...createEmptyEssays(), ...(profileStudent.profile.essays || {}) } : createEmptyEssays();
   const filtered = universityCatalog
     .filter(u => {
       const q = query.trim().toLowerCase();
@@ -3520,11 +3629,21 @@ export default function App() {
 
   const addProfileTarget = university => {
     if (!profileStudent || profileTargetIds.has(university.id)) return;
-    const departments = exactDepartmentsForUniversity(university);
+    const currentTargets = profileStudent.profile.targets || [];
+    if (currentTargets.length >= 10) {
+      setProfileActionNotice("관심대학은 최대 10개까지 관리할 수 있습니다.");
+      return;
+    }
+    const departments = departmentOptionsForUniversity(university, apiMajors, exactDepartmentsForUniversity(university));
     updateProfileStudentProfile(profile => ({
       ...profile,
-      targets: [...(profile.targets || []), { ...university, dept: departments[0] || "" }],
+      targets: [
+        ...(profile.targets || []),
+        { ...university, dept: departments[0] || "", goal: profileGoalTargets.length < 2 },
+      ],
     }));
+    setProfileSelectedTargetId(university.id);
+    setProfileActionNotice("");
     setQuery("");
   };
 
@@ -3533,6 +3652,8 @@ export default function App() {
       ...profile,
       targets: (profile.targets || []).filter(item => item.id !== id),
     }));
+    if (profileSelectedTargetId === id) setProfileSelectedTargetId(null);
+    setProfileActionNotice("");
   };
 
   const setProfileTargetDept = (id, dept) => {
@@ -3540,6 +3661,30 @@ export default function App() {
       ...profile,
       targets: (profile.targets || []).map(item => item.id === id ? { ...item, dept } : item),
     }));
+  };
+
+  const toggleProfileTargetGoal = id => {
+    const isGoal = profileGoalIds.has(id);
+    if (!isGoal && profileGoalTargets.length >= 2) {
+      setProfileActionNotice("목표대학은 최대 2개까지 표시할 수 있습니다.");
+      return;
+    }
+    updateProfileStudentProfile(profile => {
+      const targets = profile.targets || [];
+      const explicitMode = targets.some(item => Object.prototype.hasOwnProperty.call(item, "goal"));
+      return {
+        ...profile,
+        targets: targets.map((item, index) => {
+          const normalized = explicitMode ? item : { ...item, goal: index < 2 };
+          return item.id === id ? { ...normalized, goal: !isGoal } : normalized;
+        }),
+      };
+    });
+    setProfileActionNotice("");
+  };
+
+  const toggleProfileGradeYear = year => {
+    setProfileGradeCollapse(prev => ({ ...prev, [year]: !prev[year] }));
   };
 
   const setProfileGrade = (subject, semester, value) => {
@@ -3715,6 +3860,53 @@ export default function App() {
       return next;
     });
     setAssignmentNotice("과제가 삭제되었습니다. 학생 과제 보드에서도 제거됩니다.");
+  };
+
+  const removeProfileStudent = async () => {
+    if (!profileStudent) return;
+    const studentId = profileStudent.user.id;
+    const confirmed = typeof window === "undefined" ? true : window.confirm(`${profileStudent.user.name} 학생을 상담사 목록에서 삭제할까요?`);
+    if (!confirmed) return;
+
+    if (supabaseEnabled) {
+      try {
+        const state = await removeBackendStudentFromCounselor(studentId);
+        if (state) applyBackendState(state);
+        setProfileStudentId(null);
+        setProfileActionNotice("");
+      } catch (error) {
+        setBackendError(error.message || "학생 삭제에 실패했습니다.");
+      }
+      return;
+    }
+
+    setUsers(prev => {
+      const next = prev.filter(user => user.id !== studentId);
+      writeJson(USERS_KEY, next);
+      return next;
+    });
+    setProfiles(prev => {
+      const next = { ...prev };
+      delete next[studentId];
+      writeJson(PROFILES_KEY, next);
+      return next;
+    });
+    setRequests(prev => {
+      const next = prev.filter(request => request.studentId !== studentId);
+      writeJson(REQUESTS_KEY, next);
+      return next;
+    });
+    setCounselingJournals(prev => {
+      const next = prev.filter(journal => journal.studentId !== studentId);
+      writeJson(JOURNALS_KEY, next);
+      return next;
+    });
+    setClassMemberships(prev => {
+      const next = prev.filter(item => item.studentId !== studentId);
+      writeJson(MEMBERSHIPS_KEY, next);
+      return next;
+    });
+    setProfileStudentId(null);
   };
 
   const updateRecordText = value => {
@@ -3907,6 +4099,47 @@ export default function App() {
             <div>Supabase 계정 정보를 불러오는 중입니다...</div>
           </div>
         </main>
+      </>
+    );
+  }
+
+  if (passwordRecoveryOpen) {
+    return (
+      <>
+        <style>{css}</style>
+        <div className="auth-root">
+          <form className="auth-card" onSubmit={submitPasswordReset}>
+            <div className="auth-title">새 비밀번호 설정</div>
+            <div className="auth-sub">
+              {currentUser?.email ? `${currentUser.email} 계정의 비밀번호를 변경합니다.` : "비밀번호 재설정 링크가 확인되었습니다."}
+            </div>
+            <div className="field">
+              <label htmlFor="reset-password">새 비밀번호</label>
+              <input
+                id="reset-password"
+                className="auth-input"
+                type="password"
+                value={passwordResetForm.password}
+                onChange={e => setPasswordResetValue("password", e.target.value)}
+                autoComplete="new-password"
+              />
+            </div>
+            <div className="field">
+              <label htmlFor="reset-password-confirm">새 비밀번호 확인</label>
+              <input
+                id="reset-password-confirm"
+                className="auth-input"
+                type="password"
+                value={passwordResetForm.confirmPassword}
+                onChange={e => setPasswordResetValue("confirmPassword", e.target.value)}
+                autoComplete="new-password"
+              />
+            </div>
+            {passwordResetNotice && <div className="auth-notice">{passwordResetNotice}</div>}
+            {passwordResetError && <div className="auth-error">{passwordResetError}</div>}
+            <button className="primary-btn" type="submit">비밀번호 변경</button>
+          </form>
+        </div>
       </>
     );
   }

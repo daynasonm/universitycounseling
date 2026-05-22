@@ -259,6 +259,18 @@ export const signOutBackend = async () => {
   await supabase.auth.signOut();
 };
 
+export const onBackendAuthStateChange = callback => {
+  if (!supabase) return () => {};
+  const { data } = supabase.auth.onAuthStateChange(callback);
+  return () => data.subscription.unsubscribe();
+};
+
+export const updateBackendPassword = async password => {
+  if (!supabase) throw new Error("Supabase 설정이 없습니다.");
+  const { error } = await supabase.auth.updateUser({ password });
+  if (error) throw error;
+};
+
 export const saveBackendProfile = async (studentId, profile) => {
   if (!supabase || !studentId) return;
   const { error } = await supabase
@@ -371,6 +383,15 @@ export const deleteBackendJournal = async id => {
   if (!supabase || !id) return;
   const { error } = await supabase.from("counseling_journals").delete().eq("id", id);
   if (error) throw error;
+};
+
+export const removeBackendStudentFromCounselor = async studentId => {
+  if (!supabase || !studentId) return null;
+  const { error } = await supabase.rpc("remove_student_from_counselor", {
+    target_student_id: studentId,
+  });
+  if (error) throw error;
+  return loadBackendState();
 };
 
 export const runAiAnalysis = async payload => {
