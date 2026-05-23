@@ -548,6 +548,32 @@ begin
 end;
 $$;
 
+create or replace function public.remove_student_from_counselor(target_student_id uuid)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if public.is_admin() then
+    delete from public.app_users
+     where id = target_student_id
+       and role = 'student';
+    return;
+  end if;
+
+  if not public.is_counselor_for_student(target_student_id) then
+    raise exception '연결된 학생만 삭제할 수 있습니다.';
+  end if;
+
+  delete from public.class_memberships membership
+  using public.counselor_classes counselor_class
+  where membership.class_id = counselor_class.id
+    and membership.student_id = target_student_id
+    and counselor_class.counselor_id = auth.uid();
+end;
+$$;
+
 alter table public.app_users enable row level security;
 alter table public.student_profiles enable row level security;
 alter table public.consultation_requests enable row level security;

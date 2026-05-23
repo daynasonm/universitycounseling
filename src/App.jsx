@@ -2198,6 +2198,134 @@ select:focus{border-color:#0EA5E9;}
 .booking-select,.booking-note{font-size:13.5px;line-height:1.55;}
 .booking-submit{font-size:14px;}
 .empty{font-size:14px;line-height:1.6;}
+.topclass-action-row{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px;}
+.topclass-action-row .back-btn{margin-bottom:0;}
+.danger-outline-btn{border:1px solid #FCA5A5;background:#fff;color:#DC2626;border-radius:9px;padding:9px 14px;font-size:13px;font-weight:900;font-family:'Noto Sans KR',sans-serif;cursor:pointer;}
+.danger-outline-btn:hover{background:#FEF2F2;}
+.mini-outline-btn{display:inline-flex;align-items:center;justify-content:center;border:1px solid rgba(14,165,233,0.34);background:#fff;color:#0EA5E9;border-radius:999px;padding:7px 13px;font-size:12px;font-weight:900;font-family:'Noto Sans KR',sans-serif;cursor:pointer;white-space:nowrap;}
+.mini-outline-btn:disabled{cursor:not-allowed;opacity:.48;}
+.topclass-counselor-detail + .cstats,.topclass-counselor-detail ~ .counselor-edit-panel,.topclass-counselor-detail ~ .profile-grid{display:none;}
+.topclass-profile-card,.topclass-section{border:1px solid rgba(255,255,255,0.78);background:rgba(255,255,255,0.76);backdrop-filter:blur(20px) saturate(155%);box-shadow:0 16px 40px rgba(11,19,36,0.08),inset 0 1px 0 rgba(255,255,255,0.72);border-radius:24px;padding:28px 32px;margin-bottom:18px;}
+.topclass-profile-top{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;margin-bottom:18px;}
+.topclass-profile-main{min-width:0;}
+.topclass-name-row{display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
+.topclass-name-row h1{font-size:30px;line-height:1.15;font-weight:900;color:#0B1324;margin:0;}
+.topclass-meta{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:8px;color:#6B7684;font-size:13.5px;font-weight:600;}
+.topclass-profile-edit{display:grid;grid-template-columns:1fr 1fr 1fr 170px 170px;gap:10px;margin:12px 0 18px;padding:16px;border:1px solid rgba(14,165,233,0.18);border-radius:18px;background:rgba(234,247,255,0.55);}
+.topclass-profile-edit .field{margin-bottom:0;}
+.topclass-major-chip{display:inline-flex;align-items:center;gap:12px;border:1px solid rgba(14,165,233,0.24);background:linear-gradient(135deg,rgba(14,165,233,0.12),rgba(255,255,255,0.9));border-radius:20px;padding:10px 16px;margin-bottom:18px;box-shadow:0 12px 28px rgba(14,165,233,0.10);}
+.topclass-major-chip span{font-size:12px;font-weight:900;color:#0EA5E9;}
+.topclass-major-chip strong{font-size:24px;line-height:1.2;font-weight:900;color:#0B1324;}
+.topclass-target-preview{border:1px solid rgba(14,165,233,0.26);border-radius:20px;padding:18px 20px;background:linear-gradient(135deg,rgba(234,247,255,0.68),rgba(255,255,255,0.84));box-shadow:0 16px 34px rgba(14,165,233,0.08);}
+.topclass-preview-label{font-size:12px;font-weight:900;color:#0EA5E9;margin-bottom:12px;}
+.topclass-goal-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;}
+.topclass-goal-card,.topclass-empty-card{border:1px solid #CFE9FF;border-radius:18px;background:rgba(255,255,255,0.82);padding:20px 22px;text-align:left;font-family:'Noto Sans KR',sans-serif;color:#0B1324;min-height:92px;}
+.topclass-goal-card{cursor:pointer;}
+.topclass-goal-card:hover{border-color:#0EA5E9;box-shadow:0 12px 28px rgba(14,165,233,0.12);}
+.topclass-goal-card strong{display:block;font-size:21px;font-weight:900;margin-bottom:8px;}
+.topclass-goal-card span{display:block;color:#0EA5E9;font-weight:900;}
+.topclass-empty-card{display:flex;align-items:center;color:#9AA6B2;font-size:13px;font-weight:800;}
+.topclass-summary-chips,.topclass-badge-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:14px;}
+.topclass-summary-chips span,.topclass-badge-row span{display:inline-flex;align-items:center;border:1px solid #E1E7EF;background:#F8FAFC;border-radius:999px;padding:6px 10px;color:#6B7684;font-size:12px;font-weight:900;}
+.topclass-badge-row .blue{background:#EAF7FF;border-color:#CFE9FF;color:#0EA5E9;}
+.topclass-section-head{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;margin-bottom:20px;}
+.topclass-eyebrow{font-size:13px;font-weight:900;color:#0EA5E9;margin-bottom:6px;}
+.topclass-section h2{font-size:30px;line-height:1.22;font-weight:900;color:#0B1324;margin:0 0 8px;}
+.topclass-section p{font-size:14px;color:#6B7684;line-height:1.7;margin:0;}
+.topclass-search-panel{border:1px solid rgba(14,165,233,0.18);border-radius:20px;padding:18px 20px;margin-bottom:18px;background:rgba(255,255,255,0.55);}
+.topclass-filter-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:12px;}
+.topclass-search-note{margin-top:13px;color:#0284C7;font-size:13px;font-weight:900;}
+.topclass-results{margin-top:14px;}
+.topclass-action-notice{margin-top:10px;color:#F97316;font-size:12.5px;font-weight:800;}
+.topclass-target-workspace{display:grid;grid-template-columns:360px minmax(0,1fr);gap:18px;align-items:start;}
+.topclass-interest-list h3{font-size:17px;font-weight:900;color:#0B1324;margin:0 0 12px;}
+.topclass-interest-stack{display:grid;gap:10px;}
+.topclass-interest-card{position:relative;display:grid;grid-template-columns:12px minmax(0,1fr) auto;gap:12px;align-items:start;border:1px solid #E1E7EF;border-radius:18px;background:rgba(255,255,255,0.74);padding:16px;text-align:left;font-family:'Noto Sans KR',sans-serif;cursor:pointer;color:#0B1324;min-height:100px;}
+.topclass-interest-card.active{border-color:#0EA5E9;background:rgba(234,247,255,0.64);box-shadow:0 12px 28px rgba(14,165,233,0.10);}
+.topclass-interest-card .dot{width:10px;height:10px;border-radius:50%;margin-top:7px;}
+.topclass-interest-card strong{display:block;font-size:17px;font-weight:900;margin-bottom:2px;}
+.topclass-interest-card small{display:block;color:#6B7684;font-size:12.5px;font-weight:700;}
+.topclass-interest-card em{font-style:normal;color:#059669;font-size:12px;font-weight:900;white-space:nowrap;}
+.topclass-goal-toggle{grid-column:2/-1;justify-self:start;border:1px solid #0EA5E9;border-radius:999px;color:#0EA5E9;background:#fff;padding:6px 10px;font-size:12px;font-weight:900;}
+.topclass-goal-toggle.active{background:#EAF7FF;}
+.topclass-target-detail{border:1px solid #E1E7EF;border-radius:20px;background:rgba(255,255,255,0.64);padding:20px;}
+.topclass-target-hero{display:grid;grid-template-columns:64px minmax(0,1fr) auto;gap:16px;align-items:start;border-bottom:1px solid #EEF2F7;padding-bottom:16px;margin-bottom:16px;}
+.topclass-univ-mark{width:64px;height:64px;border-radius:16px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:18px;font-weight:900;}
+.topclass-target-hero h3{font-size:24px;font-weight:900;color:#0B1324;margin:0 0 4px;}
+.topclass-target-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end;}
+.topclass-target-grid{display:grid;grid-template-columns:1fr 1.7fr;gap:12px;align-items:end;margin-bottom:16px;}
+.topclass-target-grid .field{margin-bottom:0;}
+.topclass-fit-panel{display:grid;grid-template-columns:1fr auto 1.35fr;gap:16px;align-items:center;border:1px solid #BBF7D0;border-radius:14px;background:#F0FDF4;padding:14px 16px;min-height:74px;}
+.topclass-fit-panel span{display:block;color:#6B7684;font-size:12px;font-weight:800;margin-bottom:3px;}
+.topclass-fit-panel strong{display:block;color:#0B1324;font-size:24px;font-weight:900;}
+.topclass-fit-panel i{display:block;height:7px;border-radius:999px;background:#059669;margin-top:8px;max-width:180px;}
+.topclass-fit-arrow{font-size:22px;color:#CBD5E1;}
+.topclass-admission-card,.topclass-dept-rank,.topclass-chart-card,.topclass-record-analysis{border:1px solid #E1E7EF;border-radius:18px;background:rgba(255,255,255,0.72);padding:20px;margin-top:16px;}
+.topclass-admission-head{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;margin-bottom:16px;}
+.topclass-admission-head span,.topclass-admission-range span{display:block;color:#9AA6B2;font-size:12px;font-weight:900;margin-bottom:5px;}
+.topclass-admission-head h3{font-size:22px;font-weight:900;color:#0B1324;margin:0 0 4px;}
+.topclass-admission-range{min-width:170px;border:1px solid #CFE9FF;border-radius:16px;background:linear-gradient(135deg,#EAF7FF,#FFF7ED);padding:18px;text-align:center;}
+.topclass-admission-range strong{font-size:22px;font-weight:900;color:#0B1324;}
+.topclass-stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px;}
+.topclass-stat-grid div{border:1px solid #E5EAF1;border-radius:14px;background:#F8FAFC;padding:13px;}
+.topclass-stat-grid span{display:block;font-size:11.5px;color:#9AA6B2;font-weight:900;margin-bottom:6px;}
+.topclass-stat-grid strong{font-size:18px;font-weight:900;color:#0B1324;}
+.topclass-stat-grid .orange,.topclass-dept-card .orange{color:#F97316;}
+.topclass-admission-table{border:1px solid #E5EAF1;border-radius:14px;overflow:hidden;}
+.topclass-admission-row{display:grid;grid-template-columns:1.6fr repeat(5,1fr);gap:10px;align-items:center;padding:13px 14px;border-bottom:1px solid #EEF2F7;font-size:13px;color:#334155;}
+.topclass-admission-row:last-child{border-bottom:0;}
+.topclass-admission-row.head{background:#F8FAFC;color:#6B7684;font-size:12px;font-weight:900;}
+.topclass-admission-row strong{display:block;color:#0B1324;font-weight:900;margin-bottom:3px;}
+.topclass-admission-row small{display:block;color:#9AA6B2;font-size:11px;}
+.topclass-dept-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:14px;}
+.topclass-dept-card{border:1px solid #E1E7EF;border-radius:14px;background:#fff;padding:14px;}
+.topclass-dept-card strong{display:block;color:#0B1324;font-size:15px;font-weight:900;margin-bottom:6px;}
+.topclass-dept-card span{display:block;color:#6B7684;font-size:12px;margin-bottom:10px;}
+.topclass-dept-card div{display:flex;gap:10px;flex-wrap:wrap;color:#0EA5E9;font-size:13px;}
+.topclass-tabs{margin:18px 0 12px;}
+.topclass-track-list{display:grid;gap:10px;}
+.topclass-track-card{border:1px solid #E1E7EF;border-radius:16px;background:#fff;padding:16px;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;}
+.topclass-track-card strong{display:block;font-size:16px;font-weight:900;color:#0B1324;margin-bottom:4px;}
+.topclass-track-card span{display:block;color:#6B7684;font-size:12.5px;}
+.topclass-track-card em{font-style:normal;background:#EAF7FF;color:#0EA5E9;border-radius:999px;padding:5px 10px;font-size:12px;font-weight:900;align-self:start;}
+.topclass-track-metrics{grid-column:1/-1;display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:4px;}
+.topclass-track-metrics span{background:#F8FAFC;border-radius:12px;padding:10px;color:#6B7684;font-size:12px;}
+.topclass-track-metrics b{display:block;color:#0B1324;font-size:16px;margin-top:2px;}
+.topclass-grade-years{display:grid;gap:14px;}
+.topclass-grade-year{border:1px solid rgba(14,165,233,0.25);border-radius:20px;overflow:hidden;background:rgba(255,255,255,0.72);}
+.topclass-grade-year-head{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:18px 20px;border-bottom:1px solid #EEF2F7;}
+.topclass-grade-year-head h3{display:inline-block;font-size:18px;font-weight:900;color:#0B1324;margin:0 22px 0 0;}
+.topclass-grade-year-head span{color:#0EA5E9;font-size:13px;font-weight:900;}
+.topclass-semester-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;padding:18px 20px;}
+.topclass-semester-card{border:1px solid #E5EAF1;border-radius:18px;overflow:hidden;background:#fff;}
+.topclass-semester-head{display:flex;align-items:center;justify-content:space-between;gap:12px;background:#F8FAFC;border-bottom:1px solid #EEF2F7;padding:14px 16px;}
+.topclass-semester-head strong{font-size:15px;font-weight:900;color:#0B1324;}
+.topclass-semester-head span{color:#0EA5E9;font-size:12px;font-weight:900;}
+.topclass-grade-table{width:100%;border-collapse:collapse;}
+.topclass-grade-table th,.topclass-grade-table td{border-bottom:1px solid #F7FAFD;padding:8px 10px;text-align:center;font-size:12.5px;}
+.topclass-grade-table th{color:#9AA6B2;font-weight:900;background:#fff;}
+.topclass-grade-table td:first-child,.topclass-grade-table th:first-child{text-align:left;font-weight:900;color:#334155;}
+.subject-dot{display:inline-block;width:6px;height:6px;border-radius:50%;margin-right:8px;vertical-align:middle;}
+.topclass-semester-summary{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;border:1px solid #E1E7EF;border-radius:18px;background:rgba(255,255,255,0.72);padding:18px 20px;margin-top:18px;}
+.topclass-average-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-top:12px;}
+.topclass-average-card{border:1px solid #CFE9FF;border-radius:18px;background:#fff;min-height:150px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;}
+.topclass-average-card.empty{background:#F8FAFC;border-color:#E5EAF1;color:#9AA6B2;}
+.topclass-average-card span{font-size:12px;font-weight:900;color:#6B7684;}
+.topclass-average-card strong{font-size:28px;line-height:1;font-weight:900;color:#0B1324;margin:10px 0 4px;}
+.topclass-average-card em{font-style:normal;color:#0EA5E9;font-size:12px;font-weight:900;}
+.topclass-essay-stack{display:grid;gap:14px;}
+.topclass-essay-block{border:1px solid #E1E7EF;border-radius:18px;background:#F1F5F9;padding:16px;}
+.topclass-essay-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px;}
+.topclass-essay-head h3{font-size:17px;font-weight:900;color:#0B1324;margin:0 0 3px;}
+.topclass-essay-head span{font-size:12.5px;color:#6B7684;font-weight:700;}
+.topclass-essay-textarea{min-height:150px;background:#fff;}
+.topclass-record-file{border-radius:14px;background:#F1F5F9;padding:18px 20px;margin-bottom:16px;}
+.topclass-record-file strong{display:block;color:#0B1324;font-size:16px;font-weight:900;margin-bottom:4px;}
+.topclass-record-file span{color:#6B7684;font-size:13px;font-weight:700;}
+.topclass-record-textarea{min-height:150px;background:#fff;}
+.topclass-record-analysis h3{font-size:18px;font-weight:900;color:#0B1324;margin:0 0 4px;}
+.topclass-record-analysis > div:first-child span{font-size:13px;color:#6B7684;font-weight:800;}
+.topclass-record-blocks{margin-top:16px;}
 @media (max-width: 900px){
   .auth-shell{grid-template-columns:1fr;}
   .auth-brand{padding:4px 0;}
@@ -2215,6 +2343,12 @@ select:focus{border-color:#0EA5E9;}
   .profile-head{flex-direction:column;}
   .profile-major-spotlight{display:flex;width:100%;justify-content:space-between;}
   .profile-grid{grid-template-columns:1fr;}
+  .topclass-profile-edit{grid-template-columns:1fr 1fr;}
+  .topclass-target-workspace{grid-template-columns:1fr;}
+  .topclass-target-grid{grid-template-columns:1fr;}
+  .topclass-stat-grid{grid-template-columns:repeat(2,1fr);}
+  .topclass-dept-grid{grid-template-columns:repeat(2,1fr);}
+  .topclass-average-grid{grid-template-columns:repeat(3,1fr);}
   .form-grid{grid-template-columns:1fr;}
   .strategy-kpis{grid-template-columns:repeat(2,1fr);}
   .swot-grid,.career-test-grid{grid-template-columns:repeat(2,1fr);}
@@ -2281,6 +2415,15 @@ select:focus{border-color:#0EA5E9;}
   .profile-target-results{grid-template-columns:1fr;}
   .univ-filter-bar{grid-template-columns:1fr;}
   .univ-result-meta{align-items:flex-start;flex-direction:column;}
+  .topclass-profile-card,.topclass-section{border-radius:18px;padding:18px;}
+  .topclass-profile-top,.topclass-section-head,.topclass-admission-head{flex-direction:column;}
+  .topclass-goal-grid,.topclass-filter-grid,.topclass-semester-grid,.topclass-track-metrics{grid-template-columns:1fr;}
+  .topclass-target-hero{grid-template-columns:52px minmax(0,1fr);}
+  .topclass-target-actions{grid-column:1/-1;justify-content:flex-start;}
+  .topclass-univ-mark{width:52px;height:52px;border-radius:14px;font-size:15px;}
+  .topclass-admission-row{grid-template-columns:1fr 1fr;font-size:12px;}
+  .topclass-admission-row.head{display:none;}
+  .topclass-average-grid,.topclass-dept-grid,.topclass-stat-grid{grid-template-columns:1fr;}
 	  .mobile-nav{display:grid;grid-template-columns:repeat(5,1fr);position:fixed;left:0;right:0;bottom:0;z-index:30;padding:7px 8px calc(7px + env(safe-area-inset-bottom));background:rgba(255,255,255,0.96);border-top:1px solid #E5EAF1;box-shadow:0 -8px 24px rgba(17,24,39,0.08);backdrop-filter:blur(14px);}
 	  .mobile-nav.two{grid-template-columns:repeat(2,1fr);}
 	  .mobile-nav.three{grid-template-columns:repeat(3,1fr);}
@@ -2288,6 +2431,11 @@ select:focus{border-color:#0EA5E9;}
   .auth-card{padding:20px;}
 }
 @media (max-width: 520px){
+  .topclass-action-row{align-items:stretch;flex-direction:column;}
+  .danger-outline-btn{width:100%;}
+  .topclass-profile-edit{grid-template-columns:1fr;}
+  .topclass-major-chip{display:flex;align-items:flex-start;flex-direction:column;}
+  .topclass-name-row h1,.topclass-section h2{font-size:24px;}
   .booking-hero{align-items:flex-start;flex-direction:column;}
   .booking-top-btn{width:100%;justify-content:center;}
   .date-strip{grid-template-columns:repeat(7,minmax(40px,1fr));overflow-x:auto;padding-bottom:2px;}
@@ -4567,24 +4715,445 @@ export default function App() {
 	              </>
 	            ) : profileStudent ? (
               <>
-                <button className="back-btn" type="button" onClick={() => setProfileStudentId(null)}>← 학생 목록</button>
-                <div className="profile-head">
-                  <div className="profile-head-main">
-                    <div className="profile-name">{profileStudent.user.name}</div>
-                    <div className="profile-major-spotlight">
-                      <span className="profile-major-label">희망 학과</span>
-                      <span className="profile-major-value">{profileStudent.user.preferredMajor}</span>
+                <div className="topclass-action-row">
+                  <button className="back-btn" type="button" onClick={() => setProfileStudentId(null)}>← 학생 목록</button>
+                  <button className="danger-outline-btn" type="button" onClick={removeProfileStudent}>학생 삭제</button>
+                </div>
+
+                <div className="topclass-counselor-detail">
+                  <section className="topclass-profile-card">
+                    <div className="topclass-profile-top">
+                      <div className="topclass-profile-main">
+                        <div className="topclass-name-row">
+                          <h1>{profileStudent.user.name}</h1>
+                          <button className="mini-outline-btn" type="button" onClick={() => setProfileEditOpen(open => !open)}>{profileEditOpen ? "닫기" : "수정"}</button>
+                        </div>
+                        <div className="topclass-meta">
+                          <span>{profileStudent.user.highSchool || "고등학교 미입력"}</span>
+                          <span>{profileStudent.user.gradeLevel || "학년 미입력"}</span>
+                          <span>{profileStudent.user.className || "반 미입력"}</span>
+                          <span>{profileStudent.user.email}</span>
+                        </div>
+                      </div>
+                      <span className={`score-pill ${profileStudent.avgValue ? (+profileStudent.avgValue <= 2 ? "good" : +profileStudent.avgValue <= 4 ? "mid" : "warn") : ""}`}>
+                        {profileStudent.avgValue ? `국수영 ${(+profileStudent.avgValue).toFixed(1)}등급` : "성적 미입력"}
+                      </span>
                     </div>
-                    <div className="profile-meta">
-                      <span>{profileStudent.user.highSchool}</span>
-                      <span>{profileStudent.user.gradeLevel}</span>
-                      <span>{profileStudent.user.className}</span>
-                      <span>{profileStudent.user.email}</span>
+
+                    {profileEditOpen && (
+                      <div className="topclass-profile-edit">
+                        <div className="field">
+                          <label htmlFor="topclass-edit-name">이름</label>
+                          <input id="topclass-edit-name" className="auth-input" value={profileStudent.user.name || ""} onChange={e => updateProfileStudentUser({ name:e.target.value })} />
+                        </div>
+                        <div className="field">
+                          <label htmlFor="topclass-edit-school">고등학교</label>
+                          <input id="topclass-edit-school" className="auth-input" value={profileStudent.user.highSchool || ""} onChange={e => updateProfileStudentUser({ highSchool:e.target.value })} />
+                        </div>
+                        <div className="field">
+                          <label htmlFor="topclass-edit-major">희망 학과</label>
+                          <input id="topclass-edit-major" className="auth-input" value={profileStudent.user.preferredMajor || ""} onChange={e => updateProfileStudentUser({ preferredMajor:e.target.value })} />
+                        </div>
+                        <div className="field">
+                          <label htmlFor="topclass-edit-grade">학년</label>
+                          <select id="topclass-edit-grade" className="auth-input" value={profileStudent.user.gradeLevel || "3학년"} onChange={e => updateProfileStudentUser({ gradeLevel:e.target.value })}>
+                            <option value="1학년">1학년</option>
+                            <option value="2학년">2학년</option>
+                            <option value="3학년">3학년</option>
+                          </select>
+                        </div>
+                        <div className="field">
+                          <label htmlFor="topclass-edit-class">반</label>
+                          <input id="topclass-edit-class" className="auth-input" value={profileStudent.user.className || ""} onChange={e => updateProfileStudentUser({ className:e.target.value })} />
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="topclass-major-chip">
+                      <span>희망 학과</span>
+                      <strong>{profileStudent.user.preferredMajor || "학과 미입력"}</strong>
                     </div>
-                  </div>
-                  <span className={`score-pill ${profileStudent.avgValue ? (+profileStudent.avgValue <= 2 ? "good" : +profileStudent.avgValue <= 4 ? "mid" : "warn") : ""}`}>
-                    {profileStudent.avgValue ? `국수영 ${(+profileStudent.avgValue).toFixed(1)}등급` : "성적 미입력"}
-                  </span>
+
+                    <div className="topclass-target-preview">
+                      <div className="topclass-preview-label">목표 대학</div>
+                      <div className="topclass-goal-grid">
+                        {profileGoalTargets.map(target => (
+                          <button key={target.id} type="button" className="topclass-goal-card" onClick={() => setProfileSelectedTargetId(target.id)}>
+                            <strong>{target.name}</strong>
+                            <span>{target.dept || profileStudent.user.preferredMajor || "학과 미선택"}</span>
+                          </button>
+                        ))}
+                        {profileGoalTargets.length === 0 && (
+                          <div className="topclass-empty-card">목표대학을 추가하면 여기에 표시됩니다</div>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="topclass-summary-chips">
+                      <span>목표 {profileGoalTargets.length}/2</span>
+                      <span>관심 {profileTargets.length}</span>
+                      <span>등급 {countGradeEntries(profileStudent.profile.grades || {})}칸</span>
+                      <span>{profileStudent.profile.gibpu ? "생활기록부 있음" : "생활기록부 없음"}</span>
+                      <span>{profileSelectedMatch?.label || profileStudent.match?.label || "적합도 대기"}</span>
+                    </div>
+                  </section>
+
+                  <section className="topclass-section topclass-priority-section">
+                    <div className="topclass-section-head">
+                      <div>
+                        <div className="topclass-eyebrow">최우선 관리</div>
+                        <h2>목표 대학 및 전형 적합도</h2>
+                        <p>관심대학은 최대 10개까지 담고, 그중 2개를 목표대학으로 표시해 입결·학과·전형을 바로 비교합니다.</p>
+                      </div>
+                      <span className="status-pill sent">관심 {profileTargets.length}/10 · 목표 {profileGoalTargets.length}/2</span>
+                    </div>
+
+                    <div className="topclass-search-panel">
+                      <div className="sw compact">
+                        <span className="ico">🔍</span>
+                        <input type="search" value={query} onChange={e => setQuery(e.target.value)} placeholder="대학명, 학과명, 지역 검색" />
+                      </div>
+                      <div className="topclass-filter-grid">
+                        <div className="univ-filter-field">
+                          <label htmlFor="profile-region-filter">지역</label>
+                          <select id="profile-region-filter" value={regionFilter} onChange={e => setRegionFilter(e.target.value)}>
+                            <option value="all">전국</option>
+                            {UNIVERSITY_REGIONS.map(region => <option key={region} value={region}>{region}</option>)}
+                          </select>
+                        </div>
+                        <div className="univ-filter-field">
+                          <label htmlFor="profile-department-filter">학과 계열</label>
+                          <select id="profile-department-filter" value={departmentFilter} onChange={e => setDepartmentFilter(e.target.value)}>
+                            {DEPARTMENT_FILTERS.map(item => <option key={item.key} value={item.key}>{item.label}</option>)}
+                          </select>
+                        </div>
+                        <div className="univ-filter-field">
+                          <label htmlFor="profile-rank-filter">정렬</label>
+                          <select id="profile-rank-filter" value={rankFilter} onChange={e => setRankFilter(e.target.value)}>
+                            {RANK_FILTERS.map(item => <option key={item.key} value={item.key}>{item.label}</option>)}
+                          </select>
+                        </div>
+                      </div>
+                      <div className="topclass-search-note">목표대학 2개가 표시되어도 검색 결과와 관심대학 추가는 계속 사용할 수 있습니다.</div>
+                      {(query.trim() || activeUniversityFilters) && (
+                        <div className="profile-target-results topclass-results">
+                          {filtered.slice(0, 8).map(u => (
+                            <button key={u.id} type="button" className="profile-target-result" onClick={() => addProfileTarget(u)} disabled={profileTargetIds.has(u.id) || profileTargets.length >= 10}>
+                              <span className="dot" style={{ background:u.color, width:8, height:8 }} />
+                              <span>{u.name}</span>
+                              <small>{profileTargetIds.has(u.id) ? "추가됨" : profileTargets.length >= 10 ? "10개 완료" : `${u.region} · ${TIER_LABEL[u.tier]}권`}</small>
+                            </button>
+                          ))}
+                          {!filtered.length && <div className="assignment-empty">검색 결과가 없습니다</div>}
+                        </div>
+                      )}
+                      {profileActionNotice && <div className="topclass-action-notice">{profileActionNotice}</div>}
+                    </div>
+
+                    <div className="topclass-target-workspace">
+                      <div className="topclass-interest-list">
+                        <h3>관심 대학</h3>
+                        <div className="topclass-interest-stack">
+                          {profileTargets.map(target => {
+                            const match = getMatchForAvg(target, profileStudent.avgValue);
+                            const isGoal = profileGoalIds.has(target.id);
+                            return (
+                              <button key={target.id} type="button" className={`topclass-interest-card${profileSelectedTarget?.id === target.id ? " active" : ""}`} onClick={() => setProfileSelectedTargetId(target.id)}>
+                                <span className="dot" style={{ background:target.color || "#0EA5E9" }} />
+                                <span>
+                                  <strong>{target.name}</strong>
+                                  <small>{target.dept || profileStudent.user.preferredMajor || "학과 미선택"}</small>
+                                </span>
+                                <em>{match?.label || "분석 대기"}</em>
+                                <span className={`topclass-goal-toggle${isGoal ? " active" : ""}`}>{isGoal ? "목표대학" : "목표 설정"}</span>
+                              </button>
+                            );
+                          })}
+                          {!profileTargets.length && <div className="topclass-empty-card">관심 대학을 검색해서 추가하세요</div>}
+                        </div>
+                      </div>
+
+                      <div className="topclass-target-detail">
+                        {profileSelectedTarget ? (
+                          <>
+                            <div className="topclass-target-hero">
+                              <div className="topclass-univ-mark" style={{ background:profileSelectedTarget.color || "#1B3A6B" }}>{profileSelectedTarget.short || profileSelectedTarget.name.slice(0, 2)}</div>
+                              <div>
+                                <h3>{profileSelectedTarget.name}</h3>
+                                <p>국수영 평균과 전년도 입결 기준으로 전형 적합도를 확인합니다.</p>
+                                <div className="topclass-badge-row">
+                                  <span>{profileSelectedTarget.type}</span>
+                                  <span>{profileSelectedTarget.region}</span>
+                                  <span>{TIER_LABEL[profileSelectedTarget.tier]}권</span>
+                                  {profileGoalIds.has(profileSelectedTarget.id) && <span className="blue">목표대학</span>}
+                                </div>
+                              </div>
+                              <div className="topclass-target-actions">
+                                <button className="mini-outline-btn" type="button" onClick={() => toggleProfileTargetGoal(profileSelectedTarget.id)} disabled={!profileGoalIds.has(profileSelectedTarget.id) && profileGoalTargets.length >= 2}>
+                                  {profileGoalIds.has(profileSelectedTarget.id) ? "목표 해제" : "목표대학"}
+                                </button>
+                                <button className="assignment-delete-btn" type="button" onClick={() => removeProfileTarget(profileSelectedTarget.id)}>삭제</button>
+                              </div>
+                            </div>
+
+                            <div className="topclass-target-grid">
+                              <div className="field">
+                                <label htmlFor="profile-selected-target-dept">관심 학과</label>
+                                <select id="profile-selected-target-dept" className="auth-input" value={profileSelectedDept} onChange={e => setProfileTargetDept(profileSelectedTarget.id, e.target.value)}>
+                                  <option value="">학과 선택</option>
+                                  {profileSelectedDept && !profileSelectedDepartments.includes(profileSelectedDept) && <option value={profileSelectedDept}>{profileSelectedDept}</option>}
+                                  {profileSelectedDepartments.map(dept => <option key={dept} value={dept}>{dept}</option>)}
+                                </select>
+                              </div>
+                              <div className="topclass-fit-panel" style={{ borderColor:profileSelectedMatch?.border, background:profileSelectedMatch?.bg }}>
+                                <div>
+                                  <span>국·수·영 평균</span>
+                                  <strong>{profileStudent.avgValue ? `${(+profileStudent.avgValue).toFixed(1)}등급` : "미입력"}</strong>
+                                </div>
+                                <span className="topclass-fit-arrow">→</span>
+                                <div>
+                                  <span>합격 가능성</span>
+                                  <strong style={{ color:profileSelectedMatch?.color || "#0EA5E9" }}>{profileSelectedMatch?.label || "분석 대기"}</strong>
+                                  {profileSelectedMatch && <i style={{ width:`${profileSelectedMatch.pct}%`, background:profileSelectedMatch.color }} />}
+                                </div>
+                              </div>
+                            </div>
+
+                            {profileSelectedAdmissionStats && (
+                              <div className="topclass-admission-card">
+                                <div className="topclass-admission-head">
+                                  <div>
+                                    <span>{profileSelectedAdmissionStats.year} 수시 합격 통계</span>
+                                    <h3>{profileSelectedAdmissionStats.dept}</h3>
+                                    <p>{profileSelectedAdmissionStats.info}</p>
+                                  </div>
+                                  <div className="topclass-admission-range">
+                                    <span>전년도 합격권</span>
+                                    <strong>{profileSelectedAdmissionStats.gradeRange}</strong>
+                                  </div>
+                                </div>
+                                <div className="topclass-stat-grid">
+                                  <div><span>학생부 일반 평균</span><strong>{profileSelectedAdmissionStats.generalStats.avgGrade ? `${profileSelectedAdmissionStats.generalStats.avgGrade.toFixed(1)}등급` : "-"}</strong></div>
+                                  <div><span>학생부종합 평균</span><strong className="orange">{profileSelectedAdmissionStats.comprehensiveStats.avgGrade ? `${profileSelectedAdmissionStats.comprehensiveStats.avgGrade.toFixed(1)}등급` : "-"}</strong></div>
+                                  <div><span>평균 경쟁률</span><strong>{profileSelectedAdmissionStats.competition}:1</strong></div>
+                                  <div><span>강한 전형</span><strong>{profileSelectedAdmissionStats.bestTrack}</strong></div>
+                                </div>
+                                <div className="topclass-admission-table">
+                                  <div className="topclass-admission-row head">
+                                    <span>전형</span><span>학과 평균</span><span>70% 컷</span><span>최저 합격권</span><span>경쟁률</span><span>모집 추정</span>
+                                  </div>
+                                  {profileSelectedAdmissionStats.rows.slice(0, 3).map(row => (
+                                    <div key={row.name} className="topclass-admission-row">
+                                      <span><strong>{row.name}</strong><small>{row.note}</small></span>
+                                      <span>{row.avg.toFixed(1)}등급</span>
+                                      <span>{row.cut70.toFixed(1)}등급</span>
+                                      <span>{row.last.toFixed(1)}등급</span>
+                                      <span>{row.comp}:1</span>
+                                      <span>{row.admitted}명</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+
+                            {!!profileDepartmentStats.length && (
+                              <div className="topclass-dept-rank">
+                                <div className="mini-title">학과별 수시 합격 등급표</div>
+                                <div className="mini-body">선택한 대학에 연결된 학과만 표시합니다.</div>
+                                <div className="topclass-dept-grid">
+                                  {profileDepartmentStats.map(item => (
+                                    <div key={item.dept} className="topclass-dept-card">
+                                      <strong>{item.dept}</strong>
+                                      <span>{item.field} · {item.gradeRange}</span>
+                                      <div><b>일반 {item.generalStats.avgGrade ? item.generalStats.avgGrade.toFixed(1) : "-"}등급</b><b className="orange">종합 {item.comprehensiveStats.avgGrade ? item.comprehensiveStats.avgGrade.toFixed(1) : "-"}등급</b></div>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+
+                            <div className="tabs topclass-tabs">
+                              {["수시","정시"].map(tab => <button key={tab} type="button" className={`tab${profileTrackTab === tab ? " active" : ""}`} onClick={() => setProfileTrackTab(tab)}>{tab}</button>)}
+                            </div>
+                            <div className="topclass-track-list">
+                              {profileTrackRows.map(track => (
+                                <div key={track.name} className="topclass-track-card">
+                                  <div>
+                                    <strong>{track.name}</strong>
+                                    <span>{track.note}</span>
+                                  </div>
+                                  <em>{track.type}</em>
+                                  <div className="topclass-track-metrics">
+                                    <span>권장 등급 <b>{track.grade ? `${track.grade}등급` : "수능 중심"}</b></span>
+                                    <span>경쟁률 <b>{track.comp}:1</b></span>
+                                    <span>모집인원 <b>{track.quota}명</b></span>
+                                  </div>
+                                </div>
+                              ))}
+                              {!profileTrackRows.length && <div className="assignment-empty">{profileTrackTab} 전형 없음</div>}
+                            </div>
+                          </>
+                        ) : (
+                          <div className="topclass-empty-card">관심 대학을 선택하면 입결과 전형 정보가 표시됩니다</div>
+                        )}
+                      </div>
+                    </div>
+                  </section>
+
+                  <section className="topclass-section topclass-grade-section">
+                    <div className="topclass-section-head">
+                      <div>
+                        <div className="topclass-eyebrow">성적표</div>
+                        <p>학년별로 접고 펼치며 중간·기말 원점수와 등급을 입력합니다.</p>
+                      </div>
+                      <span className="status-pill sent">{profileStudent.avgValue ? `국수영 평균 ${(+profileStudent.avgValue).toFixed(1)}등급` : "국수영 미입력"}</span>
+                    </div>
+                    <div className="topclass-grade-years">
+                      {GRADE_YEAR_GROUPS.map(group => {
+                        const collapsed = Boolean(profileGradeCollapse[group.year]);
+                        const summaries = group.semesters.map(semester => {
+                          const value = semAvgForGrades(profileStudent.profile.grades || {}, semester);
+                          return value ? `${semester} ${value}등급` : null;
+                        }).filter(Boolean);
+                        return (
+                          <article key={group.year} className="topclass-grade-year">
+                            <div className="topclass-grade-year-head">
+                              <div>
+                                <h3>{group.year}</h3>
+                                <span>{summaries.length ? summaries.join(" · ") : "미입력"}</span>
+                              </div>
+                              <button className="mini-outline-btn" type="button" onClick={() => toggleProfileGradeYear(group.year)}>{collapsed ? "펼치기" : "접기"}</button>
+                            </div>
+                            {!collapsed && (
+                              <div className="topclass-semester-grid">
+                                {group.semesters.map(semester => (
+                                  <div key={semester} className="topclass-semester-card">
+                                    <div className="topclass-semester-head">
+                                      <strong>{semester}</strong>
+                                      <span>국수영 {semAvgForGrades(profileStudent.profile.grades || {}, semester) ? `${semAvgForGrades(profileStudent.profile.grades || {}, semester)}등급` : "미입력"}</span>
+                                    </div>
+                                    <table className="topclass-grade-table">
+                                      <thead>
+                                        <tr><th>과목</th><th>중간</th><th>기말</th><th>등급</th></tr>
+                                      </thead>
+                                      <tbody>
+                                        {SUBJECTS.map(subject => (
+                                          <tr key={subject}>
+                                            <td><span className="subject-dot" style={{ background:LINE_COLORS[subject] || "#CBD5E1" }} />{subject}</td>
+                                            <td><input className="grade-mini-input score-input" type="number" min="0" max="100" step="1" placeholder="-" value={examScoreValue(profileStudent.profile.grades, subject, semester, "midterm")} onChange={e => setProfileExamScore(subject, semester, "midterm", e.target.value)} /></td>
+                                            <td><input className="grade-mini-input score-input" type="number" min="0" max="100" step="1" placeholder="-" value={examScoreValue(profileStudent.profile.grades, subject, semester, "final")} onChange={e => setProfileExamScore(subject, semester, "final", e.target.value)} /></td>
+                                            <td><input className="grade-mini-input grade-required" type="number" min="1" max="9" step="0.1" placeholder="등급" value={gradeEntryValue(profileStudent.profile.grades, subject, semester)} onChange={e => setProfileGrade(subject, semester, e.target.value)} /></td>
+                                          </tr>
+                                        ))}
+                                      </tbody>
+                                    </table>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </article>
+                        );
+                      })}
+                    </div>
+                    <div className="topclass-semester-summary">
+                      <div>
+                        <div className="mini-title">학기별 국수영 평균</div>
+                        <div className="mini-body">성적표 입력값을 기준으로 국어·수학·영어만 평균냅니다.</div>
+                      </div>
+                      <span className="status-pill sent">자동 계산</span>
+                    </div>
+                    <div className="topclass-average-grid">
+                      {SEMS.map(semester => {
+                        const value = semAvgForGrades(profileStudent.profile.grades || {}, semester);
+                        return <div key={semester} className={`topclass-average-card${value ? "" : " empty"}`}><span>{semester}</span><strong>{value || "-"}</strong><em>{value ? "등급" : "미입력"}</em></div>;
+                      })}
+                    </div>
+                    {profileHasGrades && (
+                      <div className="topclass-chart-card">
+                        <div className="mini-title">국수영 성적 추이</div>
+                        <div className="mini-body">그래프는 주요 과목 3개만 표시합니다. 1등급에 가까울수록 우수합니다.</div>
+                        <ResponsiveContainer width="100%" height={280}>
+                          <LineChart data={profileChartData} margin={{ top:8, right:20, bottom:0, left:-18 }}>
+                            <CartesianGrid strokeDasharray="3 3" stroke="#EEF2F7" />
+                            <XAxis dataKey="semester" tick={{ fontSize:12, fill:"#9AA6B2" }} />
+                            <YAxis domain={[1,9]} reversed={true} tickCount={9} tickFormatter={v=>`${v}등`} tick={{ fontSize:11, fill:"#9AA6B2" }} />
+                            <Tooltip formatter={(v,n)=>[`${v}등급`,n]} contentStyle={{ background:"#fff", border:"1px solid #E5EAF1", borderRadius:10, fontSize:13 }} />
+                            <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize:12 }} />
+                            {Object.entries(LINE_COLORS).filter(([subject]) => CORE.includes(subject)).map(([subject,color]) => <Line key={subject} type="monotone" dataKey={subject} stroke={color} strokeWidth={3} dot={{ r:4, strokeWidth:0 }} activeDot={{ r:6 }} connectNulls />)}
+                          </LineChart>
+                        </ResponsiveContainer>
+                      </div>
+                    )}
+                  </section>
+
+                  <section className="topclass-section topclass-essay-section">
+                    <div className="topclass-section-head">
+                      <div>
+                        <div className="topclass-eyebrow">자소서</div>
+                        <p>문항별 초안을 상담사가 바로 첨삭하고 분석을 확인합니다.</p>
+                      </div>
+                    </div>
+                    <div className="topclass-essay-stack">
+                      {ESSAY_PROMPTS.map(prompt => {
+                        const draft = profileEssayDrafts[prompt.id] || "";
+                        const analysis = analyzeEssayDraft(draft, prompt, profileStudent.profile.gibpu?.원문 || "", profileStudent.user.preferredMajor || "");
+                        return (
+                          <article key={prompt.id} className="topclass-essay-block">
+                            <div className="topclass-essay-head">
+                              <div>
+                                <h3>{prompt.title}</h3>
+                                <span>{draft ? `${draft.length}자 · ${analysis.level} · ${analysis.score}점` : "초안 없음"}</span>
+                              </div>
+                            </div>
+                            <textarea className="auth-input textarea-input topclass-essay-textarea" value={draft} onChange={e => updateProfileEssayDraft(prompt.id, e.target.value)} placeholder={prompt.guide} />
+                            <div className="essay-edit-feedback">
+                              <span>충분한 점 {analysis.strengths.length}</span>
+                              <span>보완점 {analysis.gaps.length}</span>
+                              <span>다음 액션 {analysis.actions.length}</span>
+                            </div>
+                          </article>
+                        );
+                      })}
+                    </div>
+                  </section>
+
+                  <section className="topclass-section topclass-record-section">
+                    <div className="topclass-section-head">
+                      <div>
+                        <div className="topclass-eyebrow">생활기록부</div>
+                        <p>업로드 파일명과 원문, AI 분석 결과를 확인하고 원문을 보정합니다.</p>
+                      </div>
+                      <button className="small-primary" type="button" onClick={runProfileRecordAgentAnalysis} disabled={aiBusy}>{aiBusy ? "AI 분석 중" : "AI 분석 갱신"}</button>
+                    </div>
+                    {aiNotice && <div className={`ai-notice${aiNotice.includes("저장") || aiNotice.includes("갱신") ? " done" : ""}`}>{aiNotice}</div>}
+                    <div className="topclass-record-file">
+                      <strong>{profileStudent.profile.fname || "업로드 파일 없음"}</strong>
+                      <span>{profileStudent.profile.gibpu ? "분석 결과 있음" : "분석 결과 없음"}</span>
+                    </div>
+                    <div className="field">
+                      <label htmlFor="topclass-record-text">생활기록부 원문</label>
+                      <textarea id="topclass-record-text" className="auth-input textarea-input topclass-record-textarea" value={profileRecordText} onChange={e => updateProfileRecordText(e.target.value)} placeholder="학생이 올린 생활기록부 내용을 옮겨 적거나 OCR 결과를 붙여넣으세요." />
+                    </div>
+                    {profileStudent.profile.gibpu?.AI분석 && (
+                      <div className="topclass-record-analysis">
+                        <div>
+                          <h3>AI 분석</h3>
+                          <span>{profileStudent.profile.gibpu.AI분석.level} · {profileStudent.profile.gibpu.AI분석.score}점</span>
+                        </div>
+                        <div className="record-analysis-grid">
+                          <div className="record-finding strength"><div className="record-finding-title">충분한 점</div><ul>{profileStudent.profile.gibpu.AI분석.strengths.map((item, index) => <li key={index}>{item}</li>)}</ul></div>
+                          <div className="record-finding gap"><div className="record-finding-title">부족한 점</div><ul>{profileStudent.profile.gibpu.AI분석.gaps.map((item, index) => <li key={index}>{item}</li>)}</ul></div>
+                        </div>
+                      </div>
+                    )}
+                    <div className="topclass-record-blocks">
+                      {profileStudent.profile.gibpu?.학생정보 && <div className="record-block"><div className="mini-title">기본 정보</div><div className="mini-body">{Object.entries(profileStudent.profile.gibpu.학생정보).map(([k,v]) => `${k}: ${v || "-"}`).join(" · ")}</div></div>}
+                      {profileStudent.profile.gibpu?.교과발달?.length > 0 && <div className="record-block"><div className="mini-title">교과 발달</div>{profileStudent.profile.gibpu.교과발달.map((item,i) => <div key={i} className="mini-body">{item.과목}: {item.특기사항 || item.성취도 || "-"}</div>)}</div>}
+                      {profileStudent.profile.gibpu?.창의체험 && <div className="record-block"><div className="mini-title">창의적 체험활동</div>{Object.entries(profileStudent.profile.gibpu.창의체험).filter(([,v])=>v).map(([k,v]) => <div key={k} className="mini-body">{k}: {v}</div>)}</div>}
+                      {profileStudent.profile.gibpu?.행동특성종합의견 && <div className="record-block"><div className="mini-title">행동특성 및 종합의견</div><div className="mini-body">{profileStudent.profile.gibpu.행동특성종합의견}</div></div>}
+                      {!profileStudent.profile.gibpu && <div className="mini-body">학생이 PDF나 사진 파일을 업로드하면 분석 내용이 여기에 표시됩니다.</div>}
+                    </div>
+                  </section>
                 </div>
 
                 <div className="cstats">
